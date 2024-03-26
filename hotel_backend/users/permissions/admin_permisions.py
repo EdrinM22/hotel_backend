@@ -1,6 +1,7 @@
 from rest_framework.permissions import BasePermission
 
-from .models import Admin
+from users.models import Admin
+
 
 class AdminPermission(BasePermission):
 

@@ -74,3 +74,10 @@ class Receptionist(AdditionalInformation):
         db_table = 'receptionist'
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+
+
+class Accountant(AdditionalInformation):
+    class Meta:
+        db_table = 'accountant'
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)

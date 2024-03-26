@@ -7,7 +7,7 @@ from rest_framework.response import Response
 
 from .serializers.cleaner_serializer import CleanerCreateSerializer
 from .models import Cleaner
-# Create your views here.
+# Create your the_API_views here.
 
 class CleanerCreateView(CreateAPIView):
     queryset = Cleaner.objects.all()
