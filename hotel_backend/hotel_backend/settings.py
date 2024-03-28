@@ -29,12 +29,13 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 CORS_ALLOW_CREDENTIALS = False
-CSRF_TRUSTED_ORIGINS = ['http://localhost:4200', 'http://127.0.0.1:8000']
-CORS_ORIGIN_WHITELIST = ['http://localhost:4200', 'http://127.0.0.1:8000']
+CSRF_TRUSTED_ORIGINS = ['http://localhost:4200', 'http://127.0.0.1:8000', 'http://127.0.0.1:8000:5173']
+CORS_ORIGIN_WHITELIST = ['http://localhost:4200', 'http://127.0.0.1:8000', 'http://127.0.0.1:8000:5173']
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://127.0.0.1:9000",
+    'http://127.0.0.1:8000:5173',
 ]
 
 
