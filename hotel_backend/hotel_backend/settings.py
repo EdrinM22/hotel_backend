@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'users',
+    'hotel_reservation',
 ]
 
 MIDDLEWARE = [
@@ -192,3 +193,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
 AUTH_USER_MODEL = "users.User"
+
+STRIPE_PUBLIC_KEY = 'pk_test_51P029IHNjsgWd8OgAcDPmajzHCCYlqUUXUPYZAyiwxxc6tL4pZxa8nrRRKXz3fP8NOm6uShwTghnCoj9bnNQfmly00unSbEHWj'
+
+STRIPE_SECRET_KEY = 'sk_test_51P029IHNjsgWd8OgQ9FI5T77rUOTqICwpOJgLkeY9wYLvufI0lkM8S0MvXonOmz9IhqyvHBQH9iFQl5R96bC7gxB00QEeO3aN8'
