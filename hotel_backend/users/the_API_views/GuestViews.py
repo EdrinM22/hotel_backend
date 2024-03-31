@@ -7,6 +7,8 @@ from users.serializers.guest_serializer import GuestListSerializer, GuestCreateS
 
 from users.models import Guest, Admin, HotelManager
 
+from users.views import get_user_type_from_retrieve
+
 
 class GuestListCreateAPIView(ListCreateAPIView):
     queryset = Guest.objects.all()
@@ -35,3 +37,5 @@ class GuestRetrieveAPIView(RetrieveAPIView):
         elif Admin.objects.filter(user=self.request.user).exists() or HotelManager.objects.filter(user=self.request.user).exists():
             return Guest.objects.get(id=self.request.query_params.get('guest_id')) if Guest.objects.filter(id=self.request.query_params.get('guest_id')).exists() else None
 
+    def retrieve(self, request, *args, **kwargs):
+        return get_user_type_from_retrieve(serializer_class=self.get_serializer_class(), type='Guest', obj=self.get_object())
