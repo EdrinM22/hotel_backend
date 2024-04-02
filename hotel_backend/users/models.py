@@ -35,9 +35,9 @@ class AdditionalInformation(models.Model):
     class Meta:
         abstract = True
 
-    resume = models.FileField(upload_to='documents/%Y/%m/%d/', blank=True, null=True)
+    resume = models.FileField(upload_to='employee/documents/', blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
-    photo = models.ImageField(upload_to='images/%Y/%m/%d/', blank=True, null=True)
+    photo = models.ImageField(upload_to='employee/images/', blank=True, null=True)
 
 
 class Admin(models.Model):
@@ -66,7 +66,7 @@ class Guest(models.Model):
         db_table = 'hotel_guest'
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    picture = models.ImageField(upload_to='images/%Y/%m/%d/', blank=True, null=True)
+    picture = models.ImageField(upload_to='guest/images/', blank=True, null=True)
 
 
 class Receptionist(AdditionalInformation):

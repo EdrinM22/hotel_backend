@@ -27,8 +27,7 @@ class HotelAdminListCreateAPIView(ListCreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({'message': 'Admin Created!'}, status=status.HTTP_201_CREATED)
+        return super(HotelAdminListCreateAPIView, self).create(request)
 
 
 class HotelAdminRetrieveAPIView(RetrieveAPIView):

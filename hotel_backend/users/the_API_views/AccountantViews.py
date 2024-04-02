@@ -6,9 +6,10 @@ from rest_framework import status
 
 from users.serializers.accountant_serializer import AccountantCreateSerializer, AccountantListSerializer
 from users.models import Accountant, Admin, HotelManager
-from users.views import get_user_type_from_retrieve
+from users.views import get_user_type_from_retrieve, create_employee_from_view
 
 from users.permissions.accountant_permissions import AccountantPermission
+
 
 
 class AccountantListCreateAPIView(ListCreateAPIView):
@@ -24,8 +25,9 @@ class AccountantListCreateAPIView(ListCreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({'message': 'Accountant Created'}, status=status.HTTP_201_CREATED)
+        # serializer.save()
+        # return Response({'message': 'Accountant Created'}, status=status.HTTP_201_CREATED)
+        return super(AccountantListCreateAPIView, self).create(request)
 
 
 class AccountantRetreiveAPIView(RetrieveAPIView):
