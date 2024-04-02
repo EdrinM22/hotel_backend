@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from users.models import Cleaner, User
-from .user_serializer import UserCreateSerializer
+from .user_serializer import UserCreateSerializer, UserListSerializer
 from abc import ABC
 
 
@@ -37,7 +37,7 @@ class CleanerCreateSerializer(CleanerAbstractSerializer):
 
 
 class CleanerListSerializer(CleanerAbstractSerializer):
-    user = UserCreateSerializer(read_only=True)
+    user = UserListSerializer(read_only=True)
 
     class Meta(CleanerAbstractSerializer.Meta):
         fields = CleanerAbstractSerializer.Meta.fields + ('id', )
