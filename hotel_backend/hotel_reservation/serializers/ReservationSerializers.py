@@ -13,7 +13,7 @@ class ReservationAbstractSerializer(serializers.ModelSerializer):
         fields = ('name', 'start_date', 'end_date')
 
 
-class ReservationCreateViaGuestInfo(ReservationAbstractSerializer):
+class ReservationCreateViaGuestUser(ReservationAbstractSerializer):
     room_id = serializers.IntegerField()
 
     class Meta(ReservationAbstractSerializer.Meta):
@@ -34,25 +34,30 @@ class ReservationCreateViaGuestInfo(ReservationAbstractSerializer):
         return reservation_obj
 
 
-class ReservationCreateViaGuestUser(ReservationAbstractSerializer):
+class ReservationCreateViaGuestInfo(ReservationAbstractSerializer):
     guest_information = GuestInformationCreateSerializer()
     room_id = serializers.IntegerField()
 
-    class Meta(ReservationAbstractSerializer):
+    class Meta(ReservationAbstractSerializer.Meta):
         model = Reservation
         fields = ('guest_information', 'payment_type', 'payment_intent_id', 'total_payment',
                   'room_id') + ReservationAbstractSerializer.Meta.fields
 
-    def validate_start_date(self, value):
-        return date_today_serializer(value)
-
-    def validate_end_date(self, value):
-        return date_today_serializer(value)
+    # def validate_start_date(self, value):
+    #     return date_today_serializer(value)
+    #
+    # def validate_end_date(self, value):
+    #     return date_today_serializer(value)
 
     def create(self, validated_data):
         guest_information = validated_data.pop('guest_information')
         guest_information_obj = GuestInformation.objects.create(**guest_information)
         room_id = validated_data.pop('room_id')
         reservation_obj = Reservation.objects.create(**validated_data, guest_information=guest_information_obj)
-        RoomReservation.objects.create(room_id=room_id, reservation=reservation_obj)
+        RoomReservation.objects.create(room_id=int(room_id), reservation=reservation_obj)
         return Reservation
+
+class ReservationListSerializer(ReservationAbstractSerializer):
+
+    class Meta(ReservationAbstractSerializer.Meta):
+        fields = ReservationAbstractSerializer.Meta.fields + ()

@@ -13,6 +13,6 @@ def size_room_type_validator(value):
     return value
 
 def date_today_serializer(value):
-    if value < date.today():
+    if value and value < date.today():
         raise ValidationError('Date is in the past! Need a date in the future!')
     return value

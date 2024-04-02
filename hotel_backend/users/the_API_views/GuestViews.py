@@ -9,6 +9,8 @@ from users.models import Guest, Admin, HotelManager
 
 from users.views import get_user_type_from_retrieve
 
+from datetime import datetime
+
 
 class GuestListCreateAPIView(ListCreateAPIView):
     queryset = Guest.objects.all()
@@ -21,10 +23,10 @@ class GuestListCreateAPIView(ListCreateAPIView):
 
     @transaction.atomic
     def create(self, request, *args, **kwargs) -> Response:
+        
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({'message': 'Guest Created'}, status=status.HTTP_201_CREATED)
+        return super(GuestListCreateAPIView, self).create(request)
 
 
 class GuestRetrieveAPIView(RetrieveAPIView):

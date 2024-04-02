@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.shortcuts import render
+from django.conf import settings
 
 from rest_framework import status
 from rest_framework.generics import CreateAPIView, RetrieveAPIView
@@ -73,11 +74,23 @@ class LogInView(RetrieveAPIView):
         return get_user_type_from_retrieve(serializer_class=self.get_serializer_class(), obj=obj, type=self.user_type)
 
 
-
 def get_user_type_from_retrieve(serializer_class, type, obj):
     if not obj:
-        return Response({'message': 'Error, Please write the user you want to get'},status=status.HTTP_400_BAD_REQUEST)
+        return Response({'message': 'Error, Please write the user you want to get'}, status=status.HTTP_400_BAD_REQUEST)
     serializer = serializer_class(obj)
     data = serializer.data
     data['type'] = type
     return Response(data, status=status.HTTP_200_OK)
+
+
+def create_employee_from_view(serializer_class, request, *args, **kwargs):
+    serializer = serializer_class(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    serializer.validated_data[
+        'photo'] = settings.MEDIA_URL + '/' + 'employee/' + 'images/' + serializer.validated_data.get('photo').name
+    serializer.validated_data[
+        'resume'] = settings.MEDIA_URL + '/' + 'employee/' + 'documents/' + serializer.validated_data.get(
+        'resume').name
+    serializer.validated_data['user'].pop('password')
+    return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
