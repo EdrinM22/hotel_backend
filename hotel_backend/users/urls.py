@@ -1,7 +1,7 @@
 from django.urls import path
 from rest_framework_simplejwt import views as jwt_views
 
-from users.views import CleanerCreateView
+from users.views import CleanerCreateView, LogInView
 
 from users.the_API_views.ReceptionistViews import ReceptionistListCreateAPIView
 from users.the_API_views.HotelAdminViews import HotelAdminListCreateAPIView
@@ -15,6 +15,7 @@ urlpatterns = [
     path('receptionist/create/list/', ReceptionistListCreateAPIView.as_view(), name='receptionist_create'),
     path('manager/create/list/', HotelManagerListCreateAPIView.as_view(), name='admin_create'),
     path('admin/create/list/', HotelAdminListCreateAPIView.as_view(), name='manager_create'),
-    path('cleaner/retrieve/', CleanerRetrieveAPIView.as_view(), name='cleaner_retrieve')
+    path('cleaner/retrieve/', CleanerRetrieveAPIView.as_view(), name='cleaner_retrieve'),
+    path('login/', LogInView.as_view(), name='log_in')
 
 ]
