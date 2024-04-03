@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from hotel_reservation.models import Room, RoomType
+from hotel_reservation.models import Room, RoomType, RoomReservation
 from .validators import room_name_validator, size_room_type_validator
+from .ReservationSerializers import ReservationFilterFromRoomSerializer
 
 
 class RoomAbstractSerializer(serializers.ModelSerializer):
@@ -41,10 +42,20 @@ class RoomCreateSerializer(RoomAbstractSerializer):
         return room_name_validator(value)
 
 
+class RoomReservationListSerializer(serializers.ModelSerializer):
+    reservation = ReservationFilterFromRoomSerializer(read_only=True)
+
+    class Meta:
+        fields = '__all__'
+        model = RoomReservation
+
+
 class RoomListSerializer(RoomAbstractSerializer):
+    room_reservations = RoomReservationListSerializer(many=True, read_only=True)
+
     class Meta(RoomAbstractSerializer.Meta):
         fields = ('id', 'real_price', 'room_name', 'room_type', 'currency',
-                  'description') + RoomAbstractSerializer.Meta.fields
+                  'description', 'room_reservations') + RoomAbstractSerializer.Meta.fields
 
 
 class RoomTypeAbstractSerializer(serializers.ModelSerializer):
