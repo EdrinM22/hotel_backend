@@ -13,8 +13,8 @@ def create_user_and_find_proper_username(**user_data):
         username = username + str(counter) if counter == 1 else username[0: -1] + str(counter)
         counter += 1
     user_data['username'] = username
-    if user_data.get('birthday'):
-        user_data['birthday'] = datetime.strptime(user_data['birthday'], '%d/%m/%Y').date()
+    # if user_data.get('birthday'):
+    #     user_data['birthday'] = datetime.strptime(user_data['birthday'], '%d/%m/%Y').date()
     user_data_obj: UserCreateSerializer = UserCreateSerializer(data=user_data)
     user_data_obj.is_valid(raise_exception=True)
     user = User.objects.create_user(**user_data)
