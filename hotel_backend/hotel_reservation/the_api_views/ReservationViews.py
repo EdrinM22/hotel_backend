@@ -5,7 +5,8 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from django.db import transaction
-from rest_framework.exceptions import NotAcceptable
+from django.db.models import Q
+from rest_framework.exceptions import NotAcceptable, ValidationError
 
 from .paginators import CustomPagination
 
@@ -16,6 +17,17 @@ from hotel_reservation.serializers.ReservationSerializers import ReservationCrea
 from users.models import Guest, Receptionist
 
 from hotel_reservation.views import calculate_the_total_cost_of_reservation, create_name_for_reservation
+
+
+def check_if_room_is_free(room_ids: [int], start_date: str, end_date: str):
+    if Reservation.objects.filter(
+        Q(start_date__gte=start_date, start_date__lt=end_date) |
+        Q(end_date__gte=start_date,
+          end_date__lt=end_date) |
+        Q(start_date__lte=start_date, end_date__gt=end_date),
+        room_reservations__room_id__in=room_ids,
+    ).exists():
+        raise ValidationError("Reservation for the rooms already exists")
 
 
 class ReservationCreateAPIView(CreateAPIView):
@@ -46,6 +58,7 @@ class ReservationCreateAPIView(CreateAPIView):
         the_data['payment_type'] = payment_type
         serializer_obj = self.get_serializer(data=the_data)
         serializer_obj.is_valid(raise_exception=True)
+        check_if_room_is_free(the_data.get('room_ids'), the_data.get('start_date'), the_data.get('end_date'))
         serializer_obj.save()
         return Response(serializer_obj.validated_data, status=status.HTTP_201_CREATED)
 
