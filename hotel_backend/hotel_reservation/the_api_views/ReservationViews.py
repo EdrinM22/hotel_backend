@@ -7,6 +7,8 @@ from rest_framework import status
 from django.db import transaction
 from rest_framework.exceptions import NotAcceptable
 
+from .paginators import CustomPagination
+
 from hotel_reservation.models import Reservation
 from hotel_reservation.serializers.ReservationSerializers import ReservationCreateViaGuestUser, \
     ReservationCreateViaGuestInfo, ReservationListSerializer
@@ -51,6 +53,7 @@ class ReservationCreateAPIView(CreateAPIView):
 class ReservationListAPIVIew(ListAPIView):
     queryset = Reservation.objects.all()
     serializer_class = ReservationListSerializer
+    pagination_class = CustomPagination
 
     def get_queryset(self):
         query_params = self.request.query_params
@@ -70,5 +73,5 @@ class ReservationListAPIVIew(ListAPIView):
             'cancelled': query_params.get('cancelled'),
             'payment_type': query_params.get('payment_type')
         }
-        filter_diction = {k: v for k, v in filter_diction.items() if v}
+        filter_diction = {k: v for k, v in filter_diction.items() if v is not None}
         return Reservation.objects.filter(**filter_diction)

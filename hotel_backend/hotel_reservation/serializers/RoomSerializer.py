@@ -54,7 +54,7 @@ class RoomListSerializer(RoomAbstractSerializer):
     room_reservations = RoomReservationListSerializer(many=True, read_only=True)
 
     class Meta(RoomAbstractSerializer.Meta):
-        fields = ('id', 'real_price', 'room_name', 'room_type', 'currency',
+        fields = ('id', 'real_price', 'online_price', 'room_name', 'room_type', 'currency',
                   'description', 'room_reservations') + RoomAbstractSerializer.Meta.fields
 
 
@@ -75,3 +75,8 @@ class RoomTypeCreateSerializer(RoomTypeAbstractSerializer):
 class RoomTypeListSerializer(RoomTypeAbstractSerializer):
     class Meta(RoomTypeAbstractSerializer.Meta):
         fields = ('id',) + RoomTypeAbstractSerializer.Meta.fields
+
+class RoomImagesSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        pass

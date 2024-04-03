@@ -55,6 +55,13 @@ class RoomReservation(models.Model):
     reservation = models.ForeignKey(Reservation, related_name='room_reservations', on_delete=models.CASCADE)
     room = models.ForeignKey('Room', related_name='room_reservations', on_delete=models.CASCADE)
 
+    def __str__(self):
+        if self.reservation.guest_user:
+            return f'Reservation of {self.reservation.guest_user.user.first_name} ' \
+                   f'{self.reservation.guest_user.user.last_name} in room: {self.room.room_unique_number}'
+        elif self.reservation.guest_information:
+            return f'Reservation of {str(self.reservation.guest_information)} in room: {str(self.room)}'
+
 
 class Room(models.Model):
     class Meta:
@@ -86,3 +93,14 @@ class RoomType(models.Model):
 
     def __str__(self):
         return str(self.type_name)
+
+
+class RoomImage(models.Model):
+    class Meta:
+        db_table = 'room_image'
+
+    image = models.ImageField(upload_to='rooms/images/')
+    room = models.ForeignKey(Room, related_name='room_images', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f'Image of {self.room.room_unique_number}'
