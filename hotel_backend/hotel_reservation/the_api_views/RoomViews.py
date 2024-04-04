@@ -5,7 +5,7 @@ from hotel_reservation.serializers.RoomSerializer import RoomListSerializer
 from datetime import datetime, timedelta
 
 
-START_DATE_ROOM_KEY: str = 'roomreservations__reservation__start_date__range'
+START_DATE_ROOM_KEY: str = 'room_reservations__reservation__start_date__range'
 END_DATE_ROOM_KEY: str = 'room_reservations__reservation__end_date__range'
 class RoomListAPIView(ListAPIView):
     queryset = Room.objects.all()
@@ -19,10 +19,10 @@ class RoomListAPIView(ListAPIView):
             start_date = None
             end_date = None
         filter_dictionary: dict = {
-            'exclude': {
-                START_DATE_ROOM_KEY: [start_date, end_date],
-                END_DATE_ROOM_KEY: [start_date, end_date],
-            },
+            # 'exclude': {
+            #     START_DATE_ROOM_KEY: [start_date, end_date],
+            #     END_DATE_ROOM_KEY: [start_date, end_date],
+            # },
             'filter': {
                 'room_type': self.request.query_params.get('room_type'),
                 'size': self.request.query_params.get('size'),
@@ -33,7 +33,7 @@ class RoomListAPIView(ListAPIView):
             for k, v in value.items():
                 if v is not None:
                     value[k] = v
-        r1 = Room.objects.filter(**filter_dictionary.get('filter')).exclude(**filter_dictionary.get('exclude'))
+        r1 = Room.objects.all()
         return r1
 
 

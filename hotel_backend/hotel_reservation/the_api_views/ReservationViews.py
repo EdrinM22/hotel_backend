@@ -10,7 +10,7 @@ from rest_framework.exceptions import NotAcceptable, ValidationError
 
 from .paginators import CustomPagination
 
-from hotel_reservation.models import Reservation
+from hotel_reservation.models import Reservation, Room
 from hotel_reservation.serializers.ReservationSerializers import ReservationCreateViaGuestUser, \
     ReservationCreateViaGuestInfo, ReservationListSerializer
 
@@ -19,15 +19,29 @@ from users.models import Guest, Receptionist
 from hotel_reservation.views import calculate_the_total_cost_of_reservation, create_name_for_reservation
 
 
-def check_if_room_is_free(room_ids: [int], start_date: str, end_date: str):
-    if Reservation.objects.filter(
-        Q(start_date__gte=start_date, start_date__lt=end_date) |
-        Q(end_date__gte=start_date,
-          end_date__lt=end_date) |
-        Q(start_date__lte=start_date, end_date__gt=end_date),
-        room_reservations__room_id__in=room_ids,
-    ).exists():
-        raise ValidationError("Reservation for the rooms already exists")
+def check_if_room_is_free(room_types: {str:int}, start_date: str, end_date: str):
+    for key, value in room_types.items():
+        query_set_size = len(Room.objects.filter(room_type__type_name=key))
+
+        # reservation_query_set = Reservation.objects.filter(
+        #     Q(start_date__gte=start_date, start_date__lt=end_date) |
+        #     Q(end_date__gte=start_date,
+        #       end_date__lt=end_date) |
+        #     Q(start_date__lte=start_date, end_date__gt=end_date),
+        #     room_reservations__room__room_type__type_name=key
+        # ).values_list('room_reservations__room_id', flat=True)
+
+        room_query_set = Room.objects.filter(
+            Q(room_reservations__reservation__start_date__gte=start_date, room_reservations__reservation__start_date__lt=end_date) |
+            Q(room_reservations__reservation__end_date__gt=start_date,
+              room_reservations__reservation__end_date__lte=end_date) |
+            Q(room_reservations__reservation__start_date__lte=start_date, room_reservations__reservation__end_date__gte=end_date),
+            room_type__type_name=key
+        )
+        if (len(room_query_set) + value) > query_set_size:
+            raise ValidationError("No Rooms in these days")
+        else:
+            raise ValidationError(f'Number of Rooms {query_set_size-len(room_query_set)-value}')
 
 
 class ReservationCreateAPIView(CreateAPIView):
@@ -56,11 +70,11 @@ class ReservationCreateAPIView(CreateAPIView):
         # the_data = map(lambda k, v: {k: v[0]}, the_data)
         the_data['total_payment'] = total_cost_of_reservation
         the_data['payment_type'] = payment_type
-        serializer_obj = self.get_serializer(data=the_data)
-        serializer_obj.is_valid(raise_exception=True)
-        check_if_room_is_free(the_data.get('room_ids'), the_data.get('start_date'), the_data.get('end_date'))
-        serializer_obj.save()
-        return Response(serializer_obj.validated_data, status=status.HTTP_201_CREATED)
+        # serializer_obj = self.get_serializer(data=the_data)
+        # serializer_obj.is_valid(raise_exception=True)
+        check_if_room_is_free(the_data.get('room_types'), the_data.get('start_date'), the_data.get('end_date'))
+        # serializer_obj.save()
+        return Response({'Hello': 'World'}, status=status.HTTP_201_CREATED)
 
 
 class ReservationListAPIVIew(ListAPIView):
