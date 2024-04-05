@@ -1,10 +1,30 @@
 from rest_framework import serializers
 
-from hotel_reservation.models import Reservation, GuestInformation, Room, RoomReservation
+from hotel_reservation.models import Reservation, GuestInformation, Room, RoomReservation, RoomType
 
 from hotel_reservation.serializers.GuestInformationSerializer import GuestInformationCreateSerializer
 
 from .validators import date_today_serializer
+
+from hotel_reservation.the_api_views.ReservationViews import get_the_room_for_diferent_days
+
+
+def find_room_ids_from_room_types(room_types: [], start_date, end_date):
+    list_of_rooms_that_will_be_reserved = []
+    for element in room_types:
+        count = 0
+        room_all_query_set = Room.objects.filter(room_type__type_name=element.get('name')).values_list('id',
+                                                                                                       flat=True).order_by(
+            'id')
+        room_for_given_dates = get_the_room_for_diferent_days(start_date=start_date, end_date=end_date,
+                                                              key=element.get('Name')).values_list('id',
+                                                                                                   flat=True).order_by(
+            'id')
+        for i in room_all_query_set:
+            if i not in room_for_given_dates and count < element.get('count'):
+                list_of_rooms_that_will_be_reserved.append(i)
+    return list_of_rooms_that_will_be_reserved
+
 
 
 class ReservationAbstractSerializer(serializers.ModelSerializer):
@@ -58,14 +78,19 @@ class ReservationCreateViaGuestUser(ReservationAbstractSerializer):
         return reservation_obj
 
 
+class RoomTypeForReservationCreateSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    count = serializers.IntegerField()
+
+
 class ReservationCreateViaGuestInfo(ReservationAbstractSerializer):
     guest_information = GuestInformationCreateSerializer()
-    room_ids = serializers.ListField(child=serializers.IntegerField())
+    room_types = RoomTypeForReservationCreateSerializer(many=True)
 
     class Meta(ReservationAbstractSerializer.Meta):
         model = Reservation
         fields = ('guest_information', 'payment_type', 'payment_intent_id', 'total_payment',
-                  'room_ids') + ReservationAbstractSerializer.Meta.fields
+                  'room_types') + ReservationAbstractSerializer.Meta.fields
 
     def validate_start_date(self, value):
         return date_today_serializer(value)
@@ -76,12 +101,15 @@ class ReservationCreateViaGuestInfo(ReservationAbstractSerializer):
     def create(self, validated_data):
         guest_information = validated_data.pop('guest_information')
         guest_information_obj = GuestInformation.objects.create(**guest_information)
-        room_ids = validated_data.pop('room_ids')
+        room_types = validated_data.pop('room_types')
         reservation_obj = Reservation.objects.create(**validated_data, guest_information=guest_information_obj)
+        room_ids = find_room_ids_from_room_types(room_types, reservation_obj.start_date, reservation_obj.end_date)
         # RoomReservation.objects.create(room_id=int(room_id), reservation=reservation_obj)
         for room_id in room_ids:
             RoomReservation.objects.create(room_id=room_id, reservation=reservation_obj)
         return Reservation
+
+
 
 
 class ReservationListSerializer(ReservationAbstractSerializer):

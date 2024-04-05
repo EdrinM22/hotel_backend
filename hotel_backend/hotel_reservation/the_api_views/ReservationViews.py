@@ -19,9 +19,21 @@ from users.models import Guest, Receptionist
 from hotel_reservation.views import calculate_the_total_cost_of_reservation, create_name_for_reservation
 
 
-def check_if_room_is_free(room_types: {str:int}, start_date: str, end_date: str):
-    for key, value in room_types.items():
-        query_set_size = len(Room.objects.filter(room_type__type_name=key))
+
+def get_the_room_for_diferent_days(start_date, end_date, key):
+     return Room.objects.filter(
+        Q(room_reservations__reservation__start_date__gte=start_date,
+          room_reservations__reservation__start_date__lt=end_date) |
+        Q(room_reservations__reservation__end_date__gt=start_date,
+          room_reservations__reservation__end_date__lte=end_date) |
+        Q(room_reservations__reservation__start_date__lte=start_date,
+          room_reservations__reservation__end_date__gte=end_date),
+        room_type__type_name=key
+    )
+
+def check_if_room_is_free(room_types: [], start_date: str, end_date: str):
+    for element in room_types:
+        query_set_size = len(Room.objects.filter(room_type__type_name=element['name']))
 
         # reservation_query_set = Reservation.objects.filter(
         #     Q(start_date__gte=start_date, start_date__lt=end_date) |
@@ -31,17 +43,14 @@ def check_if_room_is_free(room_types: {str:int}, start_date: str, end_date: str)
         #     room_reservations__room__room_type__type_name=key
         # ).values_list('room_reservations__room_id', flat=True)
 
-        room_query_set = Room.objects.filter(
-            Q(room_reservations__reservation__start_date__gte=start_date, room_reservations__reservation__start_date__lt=end_date) |
-            Q(room_reservations__reservation__end_date__gt=start_date,
-              room_reservations__reservation__end_date__lte=end_date) |
-            Q(room_reservations__reservation__start_date__lte=start_date, room_reservations__reservation__end_date__gte=end_date),
-            room_type__type_name=key
-        )
-        if (len(room_query_set) + value) > query_set_size:
+        room_query_set = get_the_room_for_diferent_days(start_date, end_date, element.get('name'))
+
+        if (len(room_query_set) + element.get('count')) > query_set_size:
             raise ValidationError("No Rooms in these days")
-        else:
-            raise ValidationError(f'Number of Rooms {query_set_size-len(room_query_set)-value}')
+
+
+
+    # def get_id_of_rooms_that_are_free(room_types: ):
 
 
 class ReservationCreateAPIView(CreateAPIView):
@@ -53,11 +62,13 @@ class ReservationCreateAPIView(CreateAPIView):
         if not self.request.user.is_authenticated or Receptionist.objects.filter(user=self.request.user).exists():
             return ReservationCreateViaGuestInfo
 
+
     @transaction.atomic
     def post(self, request, *args, **kwargs):
         if not self.request.data.get('success') or not self.request.data.get('payment_intent_id'):
             return Response({'message': 'What'}, status=status.HTTP_400_BAD_REQUEST)
         total_cost_of_reservation, payment_type = calculate_the_total_cost_of_reservation(request.data, request)
+
         # name_of_reservation = create_name_for_reservation(request.data) if request.user.is_authenticated and Guest.objects.filter(user=self.request.user).exists() else create_name_for_reservation(self.request.data, guest_account=False)
         # request.data['total_cost'] = total_cost_of_reservation
         # request.data['name'] = name_of_reservation
@@ -65,16 +76,17 @@ class ReservationCreateAPIView(CreateAPIView):
         for k, value in request.data.items():
             if k in ['start_date', 'end_date']:
                 the_data[k] = datetime.strptime(value, '%d/%m/%Y').date()
-            else:
+            elif value:
                 the_data[k] = value
+        check_if_room_is_free(the_data.get('room_types'), the_data.get('start_date'), the_data.get('end_date'))
+
         # the_data = map(lambda k, v: {k: v[0]}, the_data)
         the_data['total_payment'] = total_cost_of_reservation
         the_data['payment_type'] = payment_type
-        # serializer_obj = self.get_serializer(data=the_data)
-        # serializer_obj.is_valid(raise_exception=True)
-        check_if_room_is_free(the_data.get('room_types'), the_data.get('start_date'), the_data.get('end_date'))
-        # serializer_obj.save()
-        return Response({'Hello': 'World'}, status=status.HTTP_201_CREATED)
+        serializer_obj = self.get_serializer(data=the_data)
+        serializer_obj.is_valid(raise_exception=True)
+        serializer_obj.save()
+        return Response(serializer_obj.validated_data, status=status.HTTP_201_CREATED)
 
 
 class ReservationListAPIVIew(ListAPIView):
