@@ -90,6 +90,8 @@ class RoomType(models.Model):
     type_name = models.CharField(max_length=100, unique=True)
     total_count = models.IntegerField(null=True, blank=True)
     size = models.IntegerField(default=2)
+    real_price = models.FloatField(null=True, blank=True)
+    online_price = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return str(self.type_name)

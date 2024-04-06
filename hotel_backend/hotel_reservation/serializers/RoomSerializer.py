@@ -66,7 +66,12 @@ class RoomTypeAbstractSerializer(serializers.ModelSerializer):
 
 class RoomTypeCreateSerializer(RoomTypeAbstractSerializer):
     class Meta(RoomTypeAbstractSerializer.Meta):
-        pass
+        model = RoomType
+        fields = ('type_name', 'total_count', 'size', 'real_price', 'online_price')
+        extra_kwargs = {
+            'real_price': {'required': True},
+            'online_price': {'required': True},
+        }
 
     def validate_size(self, value):
         return size_room_type_validator(value)
