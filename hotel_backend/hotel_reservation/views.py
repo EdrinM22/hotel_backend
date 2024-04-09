@@ -15,7 +15,8 @@ from users.models import Guest, Receptionist
 
 from hotel_reservation.serializers.ReservationSerializers import find_room_ids_from_room_types
 
-from hotel_reservation.the_api_views.ReservationViews import check_if_room_is_free
+# from hotel_reservation.the_api_views.ReservationViews import check_if_room_is_free
+from hotel_reservation.the_api_views.shared import check_if_room_is_free
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 

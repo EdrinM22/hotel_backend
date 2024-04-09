@@ -6,7 +6,7 @@ from hotel_reservation.serializers.GuestInformationSerializer import GuestInform
 
 from .validators import date_today_serializer
 
-from hotel_reservation.the_api_views.ReservationViews import get_the_room_for_diferent_days
+from hotel_reservation.the_api_views.shared import get_the_room_for_diferent_days
 
 
 def find_room_ids_from_room_types(room_types: [], start_date, end_date):
