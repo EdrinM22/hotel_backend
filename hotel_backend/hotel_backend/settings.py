@@ -24,13 +24,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-y@-hd@ad$zm6%2(xl!*0u=i8+a=nlshk5s^&rhkfm9*r^d_(x9'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
 CORS_ALLOW_CREDENTIALS = False
 CSRF_TRUSTED_ORIGINS = ['http://localhost:4200', 'http://127.0.0.1:8000', 'http://localhost:5173']
 CORS_ORIGIN_WHITELIST = ['http://localhost:4200', 'http://127.0.0.1:8000', 'http://localhost:5173']
+
+
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
@@ -61,6 +63,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'users',
     'hotel_reservation',
+    'feedback'
 ]
 
 MIDDLEWARE = [
