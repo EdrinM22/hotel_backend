@@ -79,9 +79,15 @@ class RoomTypeCreateSerializer(RoomTypeAbstractSerializer):
 
 class RoomTypeListSerializer(RoomTypeAbstractSerializer):
     class Meta(RoomTypeAbstractSerializer.Meta):
-        fields = ('id',) + RoomTypeAbstractSerializer.Meta.fields
+        fields = ('id', 'real_price', 'online_price') + RoomTypeAbstractSerializer.Meta.fields
 
 class RoomImagesSerializer(serializers.ModelSerializer):
 
     class Meta:
         pass
+
+
+class RoomTypeCustomSerializer(serializers.Serializer):
+    room_type = RoomTypeListSerializer()
+    room_count = serializers.IntegerField()
+

@@ -68,6 +68,8 @@ class Guest(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     picture = models.ImageField(upload_to='guest/images/', blank=True, null=True)
 
+    def __str__(self):
+        return str(self.user)
 
 class Receptionist(AdditionalInformation):
     class Meta:
@@ -75,9 +77,14 @@ class Receptionist(AdditionalInformation):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
+    def __str__(self):
+        return str(self.user)
 
 class Accountant(AdditionalInformation):
     class Meta:
         db_table = 'accountant'
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return str(self.user)

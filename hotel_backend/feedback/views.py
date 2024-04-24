@@ -1,12 +1,12 @@
 from django.db import transaction
 from django.shortcuts import render
 from rest_framework import status
-from rest_framework.generics import ListAPIView, CreateAPIView
+from rest_framework.generics import ListAPIView, CreateAPIView, UpdateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from datetime import datetime
 from .models import Feedback
-from .serializers import FeedBackCreateSerializer, FeedBackListSerializer
+from .serializers import FeedBackCreateSerializer, FeedBackListSerializer, FeedBackUpdateSerializer
 
 from users.permissions.guest_permissions import GuestOnlyPermission, GuestPermission
 
@@ -23,7 +23,7 @@ class FeedbackCreateAPIView(CreateAPIView):
 
     @transaction.atomic
     def post(self, request, *args, **kwargs):
-        guest_id = Guest.objects.get(user=request.user).pk
+        guest_id = Guest.objects.get(user=request.user).id
         data_obj = {
             'guest': guest_id,
             **request.data
@@ -56,3 +56,20 @@ class FeedbackListAPIView(ListAPIView):
         }
         final_filter_data = dict({v for k, v in filtered_data.items() if v is not None})
         return Feedback.objects.filter(**final_filter_data)
+
+class FeedBackListAPIVIew(UpdateAPIView):
+    queryset = Feedback.objects.all()
+    serializer_class = FeedBackUpdateSerializer
+    permission_classes = [IsAuthenticated, GuestOnlyPermission]
+
+    def get_object(self) -> Feedback:
+        feedback_id = self.kwargs.get('feedback_id')
+        return Feedback.objects.get(pk=feedback_id)
+
+    def update(self, request, *args, **kwargs) -> Response:
+        feedback_obj: Feedback = self.get_object()
+        serializer_obj = self.get_serializer(feedback_obj, data=request.data)
+        serializer_obj.is_valid(raise_exception=True)
+        serializer_obj.save()
+        return Response(serializer_obj.validated_data, status=status.HTTP_200_OK)
+
