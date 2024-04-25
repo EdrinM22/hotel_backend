@@ -13,3 +13,6 @@ class GuestPermission(BasePermission):
 class GuestOnlyPermission(BasePermission):
     def has_permission(self, request, view):
         return Guest.objects.filter(user=request.user).exists()
+
+    def has_object_permission(self, request, view, obj):
+        return obj.guest == Guest.objects.get(user=request.user)

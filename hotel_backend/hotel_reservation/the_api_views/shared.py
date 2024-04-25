@@ -3,7 +3,8 @@ from rest_framework.exceptions import ValidationError
 from hotel_reservation.models import Room
 from django.db.models import Q
 
-def get_the_room_for_diferent_days(start_date, end_date, key):
+#Returns the rooms that are occupied for these dates
+def get_the_room_for_diferent_days(start_date, end_date, key=None):
     return Room.objects.filter(
         Q(room_reservations__reservation__start_date__gte=start_date,
           room_reservations__reservation__start_date__lt=end_date) |
@@ -12,7 +13,13 @@ def get_the_room_for_diferent_days(start_date, end_date, key):
         Q(room_reservations__reservation__start_date__lte=start_date,
           room_reservations__reservation__end_date__gte=end_date),
         room_type__type_name=key
-    )
+    ) if key else Room.objects.filter(
+        Q(room_reservations__reservation__start_date__gte=start_date,
+          room_reservations__reservation__start_date__lt=end_date) |
+        Q(room_reservations__reservation__end_date__gt=start_date,
+          room_reservations__reservation__end_date__lte=end_date) |
+        Q(room_reservations__reservation__start_date__lte=start_date,
+          room_reservations__reservation__end_date__gte=end_date))
 
 def check_if_room_is_free(room_types: [], start_date: str, end_date: str):
     for element in room_types:

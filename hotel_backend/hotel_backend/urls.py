@@ -23,7 +23,8 @@ from hotel_backend import settings
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('users/', include('users.urls')),
-    path('rooms/', include('hotel_reservation.urls'))
+    path('rooms/', include('hotel_reservation.urls')),
+    path('feedback/', include('feedback.urls')),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
