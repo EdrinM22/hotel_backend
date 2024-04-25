@@ -67,7 +67,7 @@ class RoomTypeAbstractSerializer(serializers.ModelSerializer):
 class RoomTypeCreateSerializer(RoomTypeAbstractSerializer):
     class Meta(RoomTypeAbstractSerializer.Meta):
         model = RoomType
-        fields = ('type_name', 'total_count', 'size', 'real_price', 'online_price')
+        fields = ('type_name', 'total_count', 'size', 'real_price', 'online_price', 'main_image')
         extra_kwargs = {
             'real_price': {'required': True},
             'online_price': {'required': True},
@@ -79,7 +79,7 @@ class RoomTypeCreateSerializer(RoomTypeAbstractSerializer):
 
 class RoomTypeListSerializer(RoomTypeAbstractSerializer):
     class Meta(RoomTypeAbstractSerializer.Meta):
-        fields = ('id', 'real_price', 'online_price') + RoomTypeAbstractSerializer.Meta.fields
+        fields = ('id', 'real_price', 'online_price', 'main_image') + RoomTypeAbstractSerializer.Meta.fields
 
 class RoomImagesSerializer(serializers.ModelSerializer):
 

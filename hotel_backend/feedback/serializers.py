@@ -16,7 +16,7 @@ class FeedBackListSerializer(serializers.ModelSerializer):
         fields = ('id', 'stars', 'text', 'guest')
 
     def get_guest(self, obj: Feedback):
-        return obj.guest
+        return f'{obj.guest.user}'
 
 
 class FeedBackUpdateSerializer(serializers.ModelSerializer):

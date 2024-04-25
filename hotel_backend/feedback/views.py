@@ -31,7 +31,7 @@ class FeedbackCreateAPIView(CreateAPIView):
         serializer_obj: FeedBackCreateSerializer = self.get_serializer(data=data_obj)
         serializer_obj.is_valid(raise_exception=True)
         serializer_obj.save()
-        return Response(serializer_obj.validated_data, status=status.HTTP_201_CREATED)
+        return Response(serializer_obj.data, status=status.HTTP_201_CREATED)
 
 
 class FeedbackListAPIView(ListAPIView):
@@ -54,7 +54,7 @@ class FeedbackListAPIView(ListAPIView):
             'stars__gt': self.request.query_params.get('stars__gt'),
             **data
         }
-        final_filter_data = dict({v for k, v in filtered_data.items() if v is not None})
+        final_filter_data = dict({k: v for k, v in filtered_data.items() if v is not None})
         return Feedback.objects.filter(**final_filter_data)
 
 class FeedBackListAPIVIew(UpdateAPIView):
