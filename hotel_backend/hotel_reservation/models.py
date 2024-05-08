@@ -92,6 +92,7 @@ class RoomType(models.Model):
     size = models.IntegerField(default=2)
     real_price = models.FloatField(null=True, blank=True)
     online_price = models.FloatField(null=True, blank=True)
+    main_image = models.ImageField(upload_to='roomtype/', null=True, blank=True)
 
     def __str__(self):
         return str(self.type_name)
@@ -106,3 +107,10 @@ class RoomImage(models.Model):
 
     def __str__(self):
         return f'Image of {self.room.room_unique_number}'
+
+class RoomTypeImage(models.Model):
+    class Meta:
+        db_table = 'room_type_image'
+
+    image = models.ImageField(upload_to='roomtype/')
+    room_type = models.ForeignKey(RoomType, related_name='images', on_delete=models.CASCADE)

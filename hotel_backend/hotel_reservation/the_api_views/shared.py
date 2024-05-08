@@ -1,7 +1,11 @@
+import datetime
+
 from rest_framework.exceptions import ValidationError
 
 from hotel_reservation.models import Room
 from django.db.models import Q
+
+from datetime import datetime
 
 #Returns the rooms that are occupied for these dates
 def get_the_room_for_diferent_days(start_date, end_date, key=None):
@@ -37,3 +41,7 @@ def check_if_room_is_free(room_types: [], start_date: str, end_date: str):
 
         if (len(room_query_set) + element.get('count')) > query_set_size:
             raise ValidationError("No Rooms in these days")
+
+def parse_to_date_time_dd_mm_yy_version(date_in_string: str):
+    return datetime.strptime(date_in_string, "%d/%m/%Y").date()
+
