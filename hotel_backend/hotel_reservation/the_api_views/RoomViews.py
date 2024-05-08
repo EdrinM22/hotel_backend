@@ -15,6 +15,9 @@ END_DATE_ROOM_KEY: str = 'room_reservations__reservation__end_date'
 
 
 class RoomListAPIView(ListAPIView):
+    '''
+    For the guests and all. They can check the type of rooms that are free in the dyas wanted
+    '''
     queryset = Room.objects.all()
     serializer_class = RoomTypeCustomSerializer
 
@@ -54,6 +57,9 @@ class RoomListAPIView(ListAPIView):
 class RoomAdminListAPIView(ListAPIView):
     queryset = Room.objects.all()
     serializer_class = RoomListSerializer
+    '''
+    Rooms for the admins or managers
+    '''
 
     def get_queryset(self):
         start_date = self.request.query_params.get('start_date')
@@ -71,6 +77,7 @@ class RoomAdminListAPIView(ListAPIView):
                 the_wanted_queryset = self.get_queryset_for_given_reservation_dates(start_date, end_date)
                 self.filter_the_queryset(the_wanted_queryset)
                 return the_wanted_queryset
+        return self.filter_the_queryset(Room.objects.all())
 
     def get_queryset_for_given_reservation_dates(self, start_date, end_date):
         return get_the_room_for_diferent_days(start_date, end_date, self.request.query_params.get('room_type'))
@@ -79,7 +86,14 @@ class RoomAdminListAPIView(ListAPIView):
     def get_queryset_except_given_reservation_dates(self, start_date, end_date):
         return Room.objects.exclude(pk__in=get_the_room_for_diferent_days(start_date, end_date, self.request.query_params.get('room_type')).values_list('id', flat=True))
 
-    def filter_the_queryset(self, query_set):
+    def filter_the_queryset(self, the_query_set):
         filter_dict = {
-            ''
+            'room_type__id': self.request.query_params.get('room_type'),
+            'room_type__size': self.request.query_params.get('size'),
+            'room_type__price': self.request.query_params.get('price'),
+            'clean': self.request.query_params.get('clean')
         }
+        return the_query_set.filter(**filter_dict)
+
+class FinanceProfitsListAPIView(ListAPIView):
+    pass
