@@ -46,7 +46,8 @@ class Reservation(models.Model):
     end_date = models.DateField()
     paid = models.BooleanField(default=True)
     cancelled = models.BooleanField(default=False)
-    payment_type = models.CharField(max_length=100, choices=payment_type_choices, default='eur')
+    payment_type = models.CharField(max_length=100, choices=payment_type_choices, default='online')
+    currency_type = models.CharField(max_length=100, choices=currency_choices, default='eur')
     payment_intent_id = models.CharField(max_length=200, unique=True, blank=True, null=True)
     total_payment = models.FloatField()
 
