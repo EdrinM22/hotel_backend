@@ -88,6 +88,6 @@ class RoomImagesSerializer(serializers.ModelSerializer):
 
 
 class RoomTypeCustomSerializer(serializers.Serializer):
-    room_type = RoomTypeListSerializer()
+    room_type = RoomTypeListSerializer(read_only=True)
     room_count = serializers.IntegerField()
 

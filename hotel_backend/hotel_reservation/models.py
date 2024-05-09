@@ -75,6 +75,7 @@ class Room(models.Model):
     size = models.IntegerField()
     room_type = models.ForeignKey('RoomType', related_name='rooms', on_delete=models.CASCADE)
     currency = models.CharField(max_length=50, choices=currency_choices, default='eur')
+    clean = models.BooleanField(default=True)
 
     def set_float_price(self):
         self.online_price = float(self.real_price) + 2
