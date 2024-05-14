@@ -1,18 +1,23 @@
 from django.db import transaction
+from django.http import QueryDict
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView, CreateAPIView
+from rest_framework.parsers import JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from hotel_reservation.models import Reservation, RoomReservation, Room, RoomType
 from hotel_reservation.serializers.RoomSerializer import RoomListSerializer, RoomTypeCustomSerializer, \
-    RoomCreateSerializer, RoomtypeListForScrollSerializer
+    RoomCreateSerializer, RoomtypeListForScrollSerializer, RoomTypeCreateSerializer
 from users.permissions.hotel_manager_permissions import HotelManagerPermissions
+from .paginators import CustomPagination
 
 from .shared import get_the_room_for_diferent_days, parse_to_date_time_dd_mm_yy_version
 
 from datetime import datetime, timedelta
+
+import json
 
 START_DATE_ROOM_KEY: str = 'room_reservations__reservation__start_date'
 END_DATE_ROOM_KEY: str = 'room_reservations__reservation__end_date'
@@ -61,6 +66,8 @@ class RoomListAPIView(ListAPIView):
 class RoomAdminListAPIView(ListAPIView):
     queryset = Room.objects.all()
     serializer_class = RoomListSerializer
+    permission_classes = [IsAuthenticated, HotelManagerPermissions]
+    pagination_class = CustomPagination
     '''
     Rooms for the admins or managers
     '''
@@ -86,9 +93,11 @@ class RoomAdminListAPIView(ListAPIView):
     def get_queryset_for_given_reservation_dates(self, start_date, end_date):
         return get_the_room_for_diferent_days(start_date, end_date, self.request.query_params.get('room_type'))
 
-
     def get_queryset_except_given_reservation_dates(self, start_date, end_date):
-        return Room.objects.exclude(pk__in=get_the_room_for_diferent_days(start_date, end_date, self.request.query_params.get('room_type')).values_list('id', flat=True))
+        return Room.objects.exclude(pk__in=get_the_room_for_diferent_days(start_date, end_date,
+                                                                          self.request.query_params.get(
+                                                                              'room_type')).values_list('id',
+                                                                                                        flat=True))
 
     def filter_the_queryset(self, the_query_set):
         filter_dict = {
@@ -97,10 +106,13 @@ class RoomAdminListAPIView(ListAPIView):
             'room_type__price': self.request.query_params.get('price'),
             'clean': self.request.query_params.get('clean')
         }
+        filter_dict = {k: v for k, v in filter_dict.items() if v is not None}
         return the_query_set.filter(**filter_dict)
+
 
 class FinanceProfitsListAPIView(ListAPIView):
     pass
+
 
 class RoomCreateAPIView(CreateAPIView):
     queryset = Room.objects.all()
@@ -132,3 +144,35 @@ class RoomTypeListForScrollerAPIView(ListAPIView):
     serializer_class = RoomtypeListForScrollSerializer
     permission_classes = [IsAuthenticated]
 
+
+class RoomTypeCreateAPIView(CreateAPIView):
+    queryset = RoomType.objects.all()
+    serializer_class = RoomTypeCreateSerializer
+    permission_classes = [IsAuthenticated, HotelManagerPermissions]
+
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        if not request.data.get('price'):
+            return Response({'message': "Please provide the price of room type"}, status=status.HTTP_400_BAD_REQUEST)
+        online_price = self.find_online_price(request.data)
+        real_price = int(request.data.get('price'))
+        data = {
+            'online_price': online_price,
+            'real_price': real_price,
+            **request.data
+        }
+        data.pop('price')
+        serializer: RoomTypeCreateSerializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def find_online_price(self, the_data):
+        return int(the_data.get('price')) + 2
+
+    def parse_to_dictionary(self):
+        data = {}
+        d1 = dict(self.request.data)
+        for k, v in d1.items():
+            data[k] = v[0]
+        return data

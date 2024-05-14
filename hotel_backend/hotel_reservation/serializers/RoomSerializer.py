@@ -51,11 +51,11 @@ class RoomReservationListSerializer(serializers.ModelSerializer):
 
 
 class RoomListSerializer(RoomAbstractSerializer):
-    room_reservations = RoomReservationListSerializer(many=True, read_only=True)
+    # room_reservations = RoomReservationListSerializer(many=True, read_only=True)
 
     class Meta(RoomAbstractSerializer.Meta):
         fields = ('id', 'real_price', 'online_price', 'room_name', 'room_type', 'currency',
-                  'description', 'room_reservations') + RoomAbstractSerializer.Meta.fields
+                  'description') + RoomAbstractSerializer.Meta.fields
 
 
 class RoomTypeAbstractSerializer(serializers.ModelSerializer):
@@ -71,6 +71,7 @@ class RoomTypeCreateSerializer(RoomTypeAbstractSerializer):
         extra_kwargs = {
             'real_price': {'required': True},
             'online_price': {'required': True},
+            'main_image': {'required': True},
         }
 
     def validate_size(self, value):
