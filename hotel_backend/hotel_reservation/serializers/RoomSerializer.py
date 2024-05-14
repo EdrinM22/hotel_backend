@@ -29,17 +29,17 @@ class RoomCreateManySerializer(RoomAbstractSerializer):
 
 
 class RoomCreateSerializer(RoomAbstractSerializer):
-    class Meta(RoomAbstractSerializer):
+    class Meta(RoomAbstractSerializer.Meta):
         fields = RoomAbstractSerializer.Meta.fields + (
-            'real_price', 'room_name', 'room_type', 'currency', 'description')
+            'real_price', 'room_name', 'room_type', 'currency', 'description', 'online_price')
 
-    def create(self, validated_data):
-        online_price = validated_data.get('real_price') + 2
-        validated_data['online_price'] = online_price
-        return Room.objects.create(**validated_data)
+    # def create(self, validated_data):
+    #     online_price = validated_data.get('real_price') + 2
+    #     validated_data['online_price'] = online_price
+    #     return Room.objects.create(**validated_data)
 
-    def validate_room_name(self, value):
-        return room_name_validator(value)
+    # def validate_room_name(self, value):
+    #     return room_name_validator(value)
 
 
 class RoomReservationListSerializer(serializers.ModelSerializer):
@@ -80,6 +80,11 @@ class RoomTypeCreateSerializer(RoomTypeAbstractSerializer):
 class RoomTypeListSerializer(RoomTypeAbstractSerializer):
     class Meta(RoomTypeAbstractSerializer.Meta):
         fields = ('id', 'real_price', 'online_price', 'main_image') + RoomTypeAbstractSerializer.Meta.fields
+
+class RoomtypeListForScrollSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RoomType
+        fields = ('id', 'type_name')
 
 class RoomImagesSerializer(serializers.ModelSerializer):
 
