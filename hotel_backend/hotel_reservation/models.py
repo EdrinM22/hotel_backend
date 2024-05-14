@@ -46,7 +46,8 @@ class Reservation(models.Model):
     end_date = models.DateField()
     paid = models.BooleanField(default=True)
     cancelled = models.BooleanField(default=False)
-    payment_type = models.CharField(max_length=100, choices=payment_type_choices, default='eur')
+    payment_type = models.CharField(max_length=100, choices=payment_type_choices, default='online')
+    currency_type = models.CharField(max_length=100, choices=currency_choices, default='eur')
     payment_intent_id = models.CharField(max_length=200, unique=True, blank=True, null=True)
     total_payment = models.FloatField()
 
@@ -67,12 +68,12 @@ class Room(models.Model):
     class Meta:
         db_table = 'room'
 
-    room_unique_number = models.CharField(max_length=100)
+    room_unique_number = models.CharField(max_length=100, unique=True)
     room_name = models.CharField(max_length=100, null=True, blank=True)
     real_price = models.FloatField()
     online_price = models.FloatField()
     description = models.TextField(null=True, blank=True)
-    size = models.IntegerField()
+    size = models.IntegerField(null=True, blank=True)
     room_type = models.ForeignKey('RoomType', related_name='rooms', on_delete=models.CASCADE)
     currency = models.CharField(max_length=50, choices=currency_choices, default='eur')
     clean = models.BooleanField(default=True)

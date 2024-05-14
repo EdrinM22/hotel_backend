@@ -1,10 +1,14 @@
+from django.db import transaction
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, CreateAPIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from hotel_reservation.models import Reservation, RoomReservation, Room
-from hotel_reservation.serializers.RoomSerializer import RoomListSerializer, RoomTypeCustomSerializer
+from hotel_reservation.models import Reservation, RoomReservation, Room, RoomType
+from hotel_reservation.serializers.RoomSerializer import RoomListSerializer, RoomTypeCustomSerializer, \
+    RoomCreateSerializer, RoomtypeListForScrollSerializer
+from users.permissions.hotel_manager_permissions import HotelManagerPermissions
 
 from .shared import get_the_room_for_diferent_days, parse_to_date_time_dd_mm_yy_version
 
@@ -97,3 +101,34 @@ class RoomAdminListAPIView(ListAPIView):
 
 class FinanceProfitsListAPIView(ListAPIView):
     pass
+
+class RoomCreateAPIView(CreateAPIView):
+    queryset = Room.objects.all()
+    serializer_class = RoomCreateSerializer
+    permission_classes = [IsAuthenticated, HotelManagerPermissions]
+
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        room_type_id = self.request.data.get('room_type')
+        if not RoomType.objects.filter(pk=room_type_id).exists():
+            return Response({'message': 'Room Failed'}, status=status.HTTP_400_BAD_REQUEST)
+        if Room.objects.filter(room_unique_number=self.request.data.get('room_unique_number')).exists():
+            return Response({'message': 'Rooom Already Exists'}, status=status.HTTP_400_BAD_REQUEST)
+        room_type = RoomType.objects.get(id=room_type_id)
+        data = {
+            'online_price': room_type.online_price,
+            'real_price': room_type.real_price,
+            'size': room_type.size,
+            **request.data
+        }
+        serializer: RoomCreateSerializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class RoomTypeListForScrollerAPIView(ListAPIView):
+    queryset = RoomType.objects.all()
+    serializer_class = RoomtypeListForScrollSerializer
+    permission_classes = [IsAuthenticated]
+
