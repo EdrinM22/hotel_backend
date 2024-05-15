@@ -5,6 +5,11 @@ from rest_framework.generics import ListAPIView, CreateAPIView, UpdateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from datetime import datetime
+
+from rest_framework.views import APIView
+
+from hotel_reservation.the_api_views.paginators import CustomPagination
+from users.permissions.hotel_manager_permissions import HotelManagerPermissions
 from .models import Feedback
 from .serializers import FeedBackCreateSerializer, FeedBackListSerializer, FeedBackUpdateSerializer
 
@@ -37,6 +42,7 @@ class FeedbackCreateAPIView(CreateAPIView):
 class FeedbackListAPIView(ListAPIView):
     serializer_class = FeedBackListSerializer
     permission_classes = [IsAuthenticated, GuestPermission]
+    pagination_class = CustomPagination
 
     def get_queryset(self):
         guest = Guest.objects.get(user=self.request.user) if Guest.objects.filter(user=self.request.user).exists() else self.request.query_params.get('guest')
@@ -50,14 +56,12 @@ class FeedbackListAPIView(ListAPIView):
             'stars': self.request.query_params.get('stars'),
             'stars__lte': self.request.query_params.get('stars__lte'),
             'stars__gte': self.request.query_params.get('stars__gte'),
-            'stars__lt': self.request.query_params.get('stars__lt'),
-            'stars__gt': self.request.query_params.get('stars__gt'),
             **data
         }
         final_filter_data = dict({k: v for k, v in filtered_data.items() if v is not None})
         return Feedback.objects.filter(**final_filter_data)
 
-class FeedBackListAPIVIew(UpdateAPIView):
+class FeedBackUpdateAPIVIew(UpdateAPIView):
     queryset = Feedback.objects.all()
     serializer_class = FeedBackUpdateSerializer
     permission_classes = [IsAuthenticated, GuestOnlyPermission]
@@ -73,3 +77,10 @@ class FeedBackListAPIVIew(UpdateAPIView):
         serializer_obj.save()
         return Response(serializer_obj.validated_data, status=status.HTTP_200_OK)
 
+
+class FeedbackAverageAndTotal(APIView):
+    permission_classes = [IsAuthenticated, HotelManagerPermissions]
+    def get(self, request, *args, **kwargs):
+        the_response = sum(Feedback.objects.all().values_list('stars', flat=True)) / len(Feedback.objects.all().values_list('stars', flat=True))
+        return Response({'average': the_response,
+                              'length': len(Feedback.objects.all().values_list('stars', flat=True))}, status=status.HTTP_200_OK)
