@@ -29,6 +29,7 @@ class RoomListAPIView(ListAPIView):
     '''
     queryset = Room.objects.all()
     serializer_class = RoomTypeCustomSerializer
+    pagination_class = CustomPagination
 
     def get(self, request, *args, **kwargs):
         if self.request.query_params.get('start_date') and self.request.query_params.get('end_date'):

@@ -45,13 +45,16 @@ class FeedbackListAPIView(ListAPIView):
     pagination_class = CustomPagination
 
     def get_queryset(self):
-        guest = Guest.objects.get(user=self.request.user) if Guest.objects.filter(user=self.request.user).exists() else self.request.query_params.get('guest')
+        guest = Guest.objects.get(user=self.request.user) if Guest.objects.filter(
+            user=self.request.user).exists() else self.request.query_params.get('guest')
         s1 = list(filter(lambda x: 'date_time_created' in x, self.request.query_params.keys()))
         data = {}
         for k in s1:
-            data[k] = datetime.strptime(self.request.query_params.get(k), '%d/%m/%Y') if self.request.query_params.get(k) else None
+            data[k] = datetime.strptime(self.request.query_params.get(k), '%d/%m/%Y') if self.request.query_params.get(
+                k) else None
 
         filtered_data = {
+            'viewed': False,
             'guest': guest,
             'stars': self.request.query_params.get('stars'),
             'stars__lte': self.request.query_params.get('stars__lte'),
@@ -60,6 +63,7 @@ class FeedbackListAPIView(ListAPIView):
         }
         final_filter_data = dict({k: v for k, v in filtered_data.items() if v is not None})
         return Feedback.objects.filter(**final_filter_data)
+
 
 class FeedBackUpdateAPIVIew(UpdateAPIView):
     queryset = Feedback.objects.all()
@@ -80,7 +84,26 @@ class FeedBackUpdateAPIVIew(UpdateAPIView):
 
 class FeedbackAverageAndTotal(APIView):
     permission_classes = [IsAuthenticated, HotelManagerPermissions]
+
     def get(self, request, *args, **kwargs):
-        the_response = sum(Feedback.objects.all().values_list('stars', flat=True)) / len(Feedback.objects.all().values_list('stars', flat=True))
+        the_response = sum(Feedback.objects.all().values_list('stars', flat=True)) / len(
+            Feedback.objects.all().values_list('stars', flat=True))
         return Response({'average': the_response,
-                              'length': len(Feedback.objects.all().values_list('stars', flat=True))}, status=status.HTTP_200_OK)
+                         'length': len(Feedback.objects.all().values_list('stars', flat=True))},
+                        status=status.HTTP_200_OK)
+
+
+class FeedbackViewedChangeAPIView(UpdateAPIView):
+    queryset = Feedback.objects.all()
+    permission_classes = [IsAuthenticated, HotelManagerPermissions]
+    serializer_class = FeedBackListSerializer
+
+    def update(self, request, *args, **kwargs):
+        feedback_id = self.kwargs.get('feedback_id')
+        if not Feedback.objects.filter(id=feedback_id).exists():
+            return Response({'message': 'Feedback not found'}, status=status.HTTP_404_NOT_FOUND)
+        feedback_obj = Feedback.objects.get(id=feedback_id)
+        feedback_obj.viewed = False
+        feedback_obj.save()
+        serializer = self.get_serializer(feedback_obj)
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
