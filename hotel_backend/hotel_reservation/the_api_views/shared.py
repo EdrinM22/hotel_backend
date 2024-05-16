@@ -1,4 +1,7 @@
 import datetime
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 from rest_framework.exceptions import ValidationError
 
@@ -45,3 +48,31 @@ def check_if_room_is_free(room_types: [], start_date: str, end_date: str):
 def parse_to_date_time_dd_mm_yy_version(date_in_string: str):
     return datetime.strptime(date_in_string, "%d/%m/%Y").date()
 
+def send_email(receiver):
+    # Email configuration
+    sender_email = "erlikuka025@gmail.com"
+    sender_password = "ohfxgzueyqzyzdqs"
+    recipient_email = receiver
+    subject = "Welcome!!!"
+    message_body = '''
+        Mireseerdhet!!! Faleminderit qe jeni pjese e Tirana Bars! 
+    '''
+
+    # Create the MIME object
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = recipient_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(message_body, 'plain'))
+
+    # Connect to Gmail's SMTP server
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, sender_password)
+
+        # Send email
+        server.sendmail(sender_email, recipient_email, msg.as_string())
+        print("Email sent successfully!")
+    except Exception as e:
+        print("Error sending email:", str(e))

@@ -63,7 +63,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'users',
     'hotel_reservation',
-    'feedback'
+    'feedback',
+    'contact_us'
 ]
 
 MIDDLEWARE = [
