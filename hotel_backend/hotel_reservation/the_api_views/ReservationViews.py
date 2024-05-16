@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from django.http import HttpResponse
 from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -12,19 +13,17 @@ from .paginators import CustomPagination
 
 from hotel_reservation.models import Reservation, Room
 from hotel_reservation.serializers.ReservationSerializers import ReservationCreateViaGuestUser, \
-    ReservationCreateViaGuestInfo, ReservationListSerializer
+    ReservationCreateViaGuestInfo, ReservationListSerializer, ReservationPDFCreateAPIView
 
 from users.models import Guest, Receptionist
 
 from hotel_reservation.views import calculate_the_total_cost_of_reservation, create_name_for_reservation
 
 from .shared import check_if_room_is_free
+from ..pdfs.ReservationReceiptPDF import ReservationReceiptPDF
 
 
-
-
-
-    # def get_id_of_rooms_that_are_free(room_types: ):
+# def get_id_of_rooms_that_are_free(room_types: ):
 
 
 class ReservationCreateAPIView(CreateAPIView):
@@ -59,9 +58,33 @@ class ReservationCreateAPIView(CreateAPIView):
         the_data['payment_type'] = payment_type
         serializer_obj = self.get_serializer(data=the_data)
         serializer_obj.is_valid(raise_exception=True)
-        serializer_obj.save()
+        obj = serializer_obj.save()
+        serializer_obj.validated_data['id'] = obj.id
         return Response(serializer_obj.validated_data, status=status.HTTP_201_CREATED)
 
+class ReservationReceiptCreateAPIView(CreateAPIView):
+    queryset = Reservation.objects.all()
+
+
+    def post(self, request, *args, **kwargs):
+        if not Reservation.objects.filter(pk=request.data.get('reservation_id')).exists():
+            return Response({'message': 'Reservation Not Found'}, status=status.HTTP_400_BAD_REQUEST)
+        reservation_obj = Reservation.objects.get(pk=request.data.get('reservation_id'))
+        serializer_obj = self.find_serializer_class(reservation_obj)(reservation_obj)
+        response = HttpResponse(content_type='application/pdf')
+        pdfMarker = ReservationReceiptPDF(data=serializer_obj.data)
+        try:
+            pdfMarker.main(response)
+        except Exception as e:
+            print(e)
+        return response
+
+
+    def find_serializer_class(self, reservation_obj: Reservation):
+        if reservation_obj.guest_user:
+            return ReservationPDFCreateAPIView
+        else:
+            return ReservationCreateViaGuestInfo
 
 class ReservationListAPIVIew(ListAPIView):
     queryset = Reservation.objects.all()

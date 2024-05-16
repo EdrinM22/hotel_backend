@@ -3,6 +3,7 @@ from rest_framework import serializers
 from hotel_reservation.models import Reservation, GuestInformation, Room, RoomReservation, RoomType
 
 from hotel_reservation.serializers.GuestInformationSerializer import GuestInformationCreateSerializer
+from users.serializers.guest_serializer import GuestListSerializer
 
 from .validators import date_today_serializer
 
@@ -73,9 +74,21 @@ class ReservationCreateViaGuestUser(ReservationAbstractSerializer):
 
     def create(self, validated_data):
         room_id = validated_data.pop('room_id')
+        room_types = validated_data.pop('room_types')
         reservation_obj = Reservation.objects.create(**validated_data)
-        RoomReservation.objects.create(reservation=reservation_obj, room_id=room_id)
+        room_ids = find_room_ids_from_room_types(room_types, reservation_obj.start_date, reservation_obj.end_date)
+        # RoomReservation.objects.create(room_id=int(room_id), reservation=reservation_obj)
+        for room_id in room_ids:
+            RoomReservation.objects.create(room_id=room_id, reservation=reservation_obj)
         return reservation_obj
+
+class ReservationPDFCreateAPIView(ReservationAbstractSerializer):
+    guest_user = GuestListSerializer(read_only=True)
+    class Meta(ReservationAbstractSerializer.Meta):
+        model = Reservation
+        fields = ('guest_user', 'payment_type', 'payment_intent_id',
+                  'total_payment') + ReservationAbstractSerializer.Meta.fields
+
 
 
 class RoomTypeForReservationCreateSerializer(serializers.Serializer):
@@ -85,12 +98,12 @@ class RoomTypeForReservationCreateSerializer(serializers.Serializer):
 
 class ReservationCreateViaGuestInfo(ReservationAbstractSerializer):
     guest_information = GuestInformationCreateSerializer()
-    room_types = RoomTypeForReservationCreateSerializer(many=True)
+    # room_types = RoomTypeForReservationCreateSerializer(many=True)
 
     class Meta(ReservationAbstractSerializer.Meta):
         model = Reservation
         fields = ('guest_information', 'payment_type', 'payment_intent_id', 'total_payment',
-                  'room_types') + ReservationAbstractSerializer.Meta.fields
+                 ) + ReservationAbstractSerializer.Meta.fields
 
     def validate_start_date(self, value):
         return date_today_serializer(value)
