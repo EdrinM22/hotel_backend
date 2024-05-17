@@ -1,3 +1,5 @@
+import datetime
+
 from rest_framework import serializers
 from hotel_reservation.models import Room, RoomType, RoomReservation
 from .validators import room_name_validator, size_room_type_validator
@@ -52,10 +54,18 @@ class RoomReservationListSerializer(serializers.ModelSerializer):
 
 class RoomListSerializer(RoomAbstractSerializer):
     # room_reservations = RoomReservationListSerializer(many=True, read_only=True)
-
+    is_reserved = serializers.SerializerMethodField()
     class Meta(RoomAbstractSerializer.Meta):
         fields = ('id', 'real_price', 'online_price', 'room_name', 'room_type', 'currency',
-                  'description') + RoomAbstractSerializer.Meta.fields
+                  'description', 'is_reserved') + RoomAbstractSerializer.Meta.fields
+
+    def get_is_reserved(self, obj: Room):
+        date_today = datetime.datetime(2024, 10, 13).date()
+        return Room.objects.filter(room_reservations__reservation__start_date__lte=date_today,
+                                   room_reservations__reservation__end_date__gte=date_today,
+                                   pk=obj.pk).exists()
+
+
 
 
 class RoomTypeAbstractSerializer(serializers.ModelSerializer):

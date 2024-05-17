@@ -24,8 +24,8 @@ class ReservationReceiptPDF:
         self.margin = {
             'leftMargin': 2 * mm,
             'rightMargin': 2 * mm,
-            'topMargin': 15 * mm,
-            'bottomMargin': 10 * mm
+            'topMargin': 30 * mm,
+            'bottomMargin': 20 * mm
         }
 
 
@@ -42,6 +42,9 @@ class ReservationReceiptPDF:
         flowables = []
         flowables.extend(self._first_page())
         return flowables
+
+    def header_and_footer(self, canbas: Canvas, _):
+        pass
 
     def main(self, request):
         flowables = self.get_flowables()
