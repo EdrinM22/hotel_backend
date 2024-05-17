@@ -9,6 +9,8 @@ from .validators import date_today_serializer
 
 from hotel_reservation.the_api_views.shared import get_the_room_for_diferent_days
 
+from functools import reduce
+
 
 def find_room_ids_from_room_types(room_types: [], start_date, end_date):
     list_of_rooms_that_will_be_reserved = []
@@ -143,3 +145,22 @@ class ReservationListSerializer(ReservationAbstractSerializer):
             return sum(obj.room_reservations.all().values_list('room__online_price', flat=True)) * days
         elif obj.payment_type == 'reception':
             return sum(obj.room_reservations.all().values_list('room__real_price', flat=True)) * days
+
+
+class ReservationReceiptViaGuestInfo(ReservationCreateViaGuestInfo):
+    real_total_payment = serializers.SerializerMethodField()
+    class Meta(ReservationCreateViaGuestInfo.Meta):
+        fields = ('id', 'real_total_payment') + ReservationCreateViaGuestInfo.Meta.fields
+
+    def get_real_total_payment(self, obj: Reservation):
+        room_reservations = obj.room_reservations.all()
+        total_payment = 0
+        for room_reservation in room_reservations:
+            room = room_reservation.room
+            total_payment += room.online_price if obj.payment_type == 'online' else room.real_price
+        return total_payment
+
+class ReservationReceiptViaGuestUser(ReservationCreateViaGuestUser):
+
+    class Meta(ReservationCreateViaGuestUser.Meta):
+        fields = ('id', ) + ReservationCreateViaGuestUser.Meta.fields

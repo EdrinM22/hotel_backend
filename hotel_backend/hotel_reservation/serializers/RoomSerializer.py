@@ -60,7 +60,7 @@ class RoomListSerializer(RoomAbstractSerializer):
                   'description', 'is_reserved') + RoomAbstractSerializer.Meta.fields
 
     def get_is_reserved(self, obj: Room):
-        date_today = datetime.datetime(2024, 10, 13).date()
+        date_today = datetime.datetime.now().date()
         return Room.objects.filter(room_reservations__reservation__start_date__lte=date_today,
                                    room_reservations__reservation__end_date__gte=date_today,
                                    pk=obj.pk).exists()

@@ -13,7 +13,8 @@ from .paginators import CustomPagination
 
 from hotel_reservation.models import Reservation, Room
 from hotel_reservation.serializers.ReservationSerializers import ReservationCreateViaGuestUser, \
-    ReservationCreateViaGuestInfo, ReservationListSerializer, ReservationPDFCreateAPIView
+    ReservationCreateViaGuestInfo, ReservationListSerializer, ReservationPDFCreateAPIView, \
+    ReservationReceiptViaGuestUser, ReservationReceiptViaGuestInfo
 
 from users.models import Guest, Receptionist
 
@@ -67,24 +68,25 @@ class ReservationReceiptCreateAPIView(CreateAPIView):
 
 
     def post(self, request, *args, **kwargs):
-        if not Reservation.objects.filter(pk=request.data.get('reservation_id')).exists():
-            return Response({'message': 'Reservation Not Found'}, status=status.HTTP_400_BAD_REQUEST)
-        reservation_obj = Reservation.objects.get(pk=request.data.get('reservation_id'))
-        serializer_obj = self.find_serializer_class(reservation_obj)(reservation_obj)
-        response = HttpResponse(content_type='application/pdf')
-        pdfMarker = ReservationReceiptPDF(data=serializer_obj.data)
         try:
+            if not Reservation.objects.filter(pk=request.data.get('reservation_id')).exists():
+                return Response({'message': 'Reservation Not Found'}, status=status.HTTP_400_BAD_REQUEST)
+            reservation_obj = Reservation.objects.get(pk=request.data.get('reservation_id'))
+            serializer_obj = self.find_serializer_class(reservation_obj)(reservation_obj)
+            response = HttpResponse(content_type='application/pdf')
+            pdfMarker = ReservationReceiptPDF(data=serializer_obj.data)
             pdfMarker.main(response)
+            return response
         except Exception as e:
             print(e)
-        return response
+
 
 
     def find_serializer_class(self, reservation_obj: Reservation):
         if reservation_obj.guest_user:
-            return ReservationPDFCreateAPIView
+            return ReservationReceiptViaGuestUser
         else:
-            return ReservationCreateViaGuestInfo
+            return ReservationReceiptViaGuestInfo
 
 class ReservationListAPIVIew(ListAPIView):
     queryset = Reservation.objects.all()
