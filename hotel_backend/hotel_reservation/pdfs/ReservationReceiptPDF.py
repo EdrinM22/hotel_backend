@@ -42,6 +42,7 @@ class ReservationReceiptPDF:
         self.mid_spacer = Spacer(0.75 * cm, 0.75 * cm)
         self.big_spacer = Spacer(1 * cm, 1 * cm)
         self.icon_path = os.path.dirname(__file__) + '\\images\\moto_icon.jpg'
+        self.check_for_null_value = lambda x: x if x else '-'
 
 
     def _first_page(self):
@@ -65,6 +66,7 @@ class ReservationReceiptPDF:
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('BOX', (0, 0), (-1, -1), 1, colors.black),
                 ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('VALIGN', (0, -2), (0, -1), 'CENTER')
             ]
         )
 
@@ -73,44 +75,53 @@ class ReservationReceiptPDF:
         data_of_table = [
             [
                 Paragraph("First Name", style=self.normal_paragraph_center),
-                Paragraph(f'{data.get("first_name")}', style=self.normal_paragraph_center),
+                Paragraph(f'{self.check_for_null_value(data.get("first_name"))}', style=self.normal_paragraph_center),
             ],
             [
                 Paragraph("Fathers_name", style=self.normal_paragraph_center),
-                Paragraph(str(data.get("fathers_name", '')), style=self.normal_paragraph_center),
+                Paragraph(f'{self.check_for_null_value(data.get("fathers_name", "-"))}', style=self.normal_paragraph_center),
             ],
             [
                 Paragraph('Last Name', style=self.normal_paragraph_center),
-                Paragraph(f'{data.get("last_name")}', style=self.normal_paragraph_center)
+                Paragraph(f'{self.check_for_null_value(data.get("last_name"))}', style=self.normal_paragraph_center)
             ],
             [
                 Paragraph('Email', style=self.normal_paragraph_center),
-                Paragraph(f'{data.get("email")}', style=self.normal_paragraph_center)
+                Paragraph(f'{self.check_for_null_value(data.get("email"))}', style=self.normal_paragraph_center)
             ],
             [
                 Paragraph('Phone_number', style=self.normal_paragraph_center),
-                Paragraph(f'{data.get("phone_number")}', style=self.normal_paragraph_center)
+                Paragraph(f'{self.check_for_null_value(data.get("phone_number"))}', style=self.normal_paragraph_center)
             ],
             [
                 Paragraph('Number of Reservation', style=self.normal_paragraph_center),
-                Paragraph(f'{self.data.get("id")}', style=self.normal_paragraph_center),
+                Paragraph(f'{self.check_for_null_value(self.data.get("id"))}', style=self.normal_paragraph_center),
             ],
             [
                 Paragraph('Start Date', style=self.normal_paragraph_center),
-                Paragraph(f'{self.data.get("start_date")}', style=self.normal_paragraph_center),
+                Paragraph(f'{self.check_for_null_value(self.data.get("start_date"))}', style=self.normal_paragraph_center),
             ],
             [
                 Paragraph('End Date', style=self.normal_paragraph_center),
-                Paragraph(f'{self.data.get("end_date")}', style=self.normal_paragraph_center),
+                Paragraph(f'{self.check_for_null_value(self.data.get("end_date"))}', style=self.normal_paragraph_center),
             ],
             [
                 Paragraph('Total Payment', style=self.normal_paragraph_center),
-                Paragraph(f'{self.data.get("total_payment")} €',
+                Paragraph(f'{self.check_for_null_value(self.data.get("total_payment"))} €',
                           style=self.normal_paragraph_center),
             ],
+            [
+                Paragraph('Room number/s', style=self.normal_paragraph_center),
+                Paragraph(f'{self.check_for_null_value(self.data.get("room_numbers"))}', style=self.normal_paragraph_center)
+            ],
+            # [
+            #     Paragraph('Room Type/s', style=self.normal_paragraph_center),
+            #     Paragraph(f'{self.data.get("room_types")}', style=self.normal_paragraph_center)
+            # ]
+
 
         ]
-        return [Table(data_of_table, style=self.the_table_style, colWidths=[80 * mm, 80 * mm])]
+        return [Table(data_of_table, style=self.the_table_style, colWidths=[80 * mm, 100 * mm])]
 
     def get_flowables(self):
         flowables = []

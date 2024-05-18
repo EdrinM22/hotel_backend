@@ -2,6 +2,7 @@ from datetime import datetime
 
 from django.http import HttpResponse
 from rest_framework.generics import CreateAPIView, ListAPIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -9,6 +10,8 @@ from django.db import transaction
 from django.db.models import Q
 from rest_framework.exceptions import NotAcceptable, ValidationError
 
+from users.permissions.hotel_manager_permissions import HotelManagerPermissions
+from users.permissions.receptionist_permissions import ReceptionistPermission
 from .paginators import CustomPagination
 
 from hotel_reservation.models import Reservation, Room
@@ -36,7 +39,6 @@ class ReservationCreateAPIView(CreateAPIView):
         if not self.request.user.is_authenticated or Receptionist.objects.filter(user=self.request.user).exists():
             return ReservationCreateViaGuestInfo
 
-
     @transaction.atomic
     def post(self, request, *args, **kwargs):
         if not self.request.data.get('success') or not self.request.data.get('payment_intent_id'):
@@ -63,9 +65,9 @@ class ReservationCreateAPIView(CreateAPIView):
         serializer_obj.validated_data['id'] = obj.id
         return Response(serializer_obj.validated_data, status=status.HTTP_201_CREATED)
 
+
 class ReservationReceiptCreateAPIView(CreateAPIView):
     queryset = Reservation.objects.all()
-
 
     def post(self, request, *args, **kwargs):
         try:
@@ -80,36 +82,27 @@ class ReservationReceiptCreateAPIView(CreateAPIView):
         except Exception as e:
             print(e)
 
-
-
     def find_serializer_class(self, reservation_obj: Reservation):
         if reservation_obj.guest_user:
             return ReservationReceiptViaGuestUser
         else:
             return ReservationReceiptViaGuestInfo
 
+
 class ReservationListAPIVIew(ListAPIView):
     queryset = Reservation.objects.all()
     serializer_class = ReservationListSerializer
     pagination_class = CustomPagination
+    permission_classes = [IsAuthenticated, ReceptionistPermission]
 
     def get_queryset(self):
         query_params = self.request.query_params
-        if not query_params.get('start_date') or not query_params.get('end_date'):
-            start_date = None
-            end_date = None
-        else:
-            start_date = datetime.strptime(query_params.get('start_date'), '%d/%m/%Y').date()
-            end_date = datetime.strptime(query_params.get('end_date'), '%d/%m/%Y').date()
+        reservation_queryset = Reservation.objects.exclude(end_date__lte=datetime.now().date())
         filter_diction = {
             # 'name__icontains': query_params.get('name', ''),
-            'start_date__gte': start_date,
-            'start_date__lte': end_date,
-            'end_date__gte': start_date,
-            'end_date__lte': end_date,
             'paid': query_params.get('paid'),
             'cancelled': query_params.get('cancelled'),
             'payment_type': query_params.get('payment_type')
         }
         filter_diction = {k: v for k, v in filter_diction.items() if v is not None}
-        return Reservation.objects.filter(**filter_diction)
+        return reservation_queryset.filter(**filter_diction).order_by('-start_date')
