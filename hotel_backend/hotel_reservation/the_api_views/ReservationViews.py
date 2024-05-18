@@ -92,7 +92,6 @@ class ReservationReceiptCreateAPIView(CreateAPIView):
 class ReservationListAPIVIew(ListAPIView):
     queryset = Reservation.objects.all()
     serializer_class = ReservationListSerializer
-    pagination_class = CustomPagination
     permission_classes = [IsAuthenticated, ReceptionistPermission]
 
     def get_queryset(self):
