@@ -1,4 +1,7 @@
+from datetime import datetime
+
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from hotel_reservation.models import Reservation, GuestInformation, Room, RoomReservation, RoomType
 
@@ -16,17 +19,19 @@ from functools import reduce
 def find_room_ids_from_room_types(room_types: [], start_date, end_date):
     list_of_rooms_that_will_be_reserved = []
     for element in room_types:
-        count = 0
-        room_all_query_set = Room.objects.filter(room_type__type_name=element.get('name')).values_list('id',
+        room_all_query_set = Room.objects.filter(room_type__id=element.get('id')).values_list('id',
                                                                                                        flat=True).order_by(
             'id')
         room_for_given_dates = get_the_room_for_diferent_days(start_date=start_date, end_date=end_date,
-                                                              key=element.get('Name')).values_list('id',
+                                                              key=element.get('name')).values_list('id',
                                                                                                    flat=True).order_by(
             'id')
-        for i in room_all_query_set:
-            if i not in room_for_given_dates and count < element.get('count'):
-                list_of_rooms_that_will_be_reserved.append(i)
+        rooms_available_for_given_date = sorted(list(filter(lambda x: x not in room_for_given_dates, room_all_query_set)))
+        rooms_to_be_added = [rooms_available_for_given_date[i] for i in range(int(element.get('count')))]
+        list_of_rooms_that_will_be_reserved.extend(rooms_to_be_added)
+        # for i in room_all_query_set:
+        #     if i not in room_for_given_dates and count < element.get('count'):
+        #         list_of_rooms_that_will_be_reserved.append(i)
     return list_of_rooms_that_will_be_reserved
 
 
@@ -66,13 +71,10 @@ class ReservationCreateViaGuestUser(ReservationAbstractSerializer):
     class Meta(ReservationAbstractSerializer.Meta):
         model = Reservation
         fields = ('guest_user', 'payment_type', 'payment_intent_id',
-                  'total_payment', 'room_id') + ReservationAbstractSerializer.Meta.fields
+                  'total_payment', 'room_id', 'paid') + ReservationAbstractSerializer.Meta.fields
 
-    def validate_start_date(self, value):
-        return date_today_serializer(value)
-
-    def validate_end_date(self, value):
-        return date_today_serializer(value)
+    def validate(self, attrs):
+        return validate_start_and_end_date(attrs)
 
     def create(self, validated_data):
         room_id = validated_data.pop('room_id')
@@ -106,14 +108,11 @@ class ReservationCreateViaGuestInfo(ReservationAbstractSerializer):
 
     class Meta(ReservationAbstractSerializer.Meta):
         model = Reservation
-        fields = ('guest_information', 'payment_type', 'payment_intent_id', 'total_payment',
+        fields = ('guest_information', 'payment_type', 'payment_intent_id', 'total_payment', 'paid'
                   ) + ReservationAbstractSerializer.Meta.fields
 
-    def validate_start_date(self, value):
-        return date_today_serializer(value)
-
-    def validate_end_date(self, value):
-        return date_today_serializer(value)
+    def validate(self, attrs):
+        return validate_start_and_end_date(attrs)
 
     def create(self, validated_data):
         guest_information = validated_data.pop('guest_information')
@@ -186,3 +185,27 @@ class ReservationReceiptViaGuestUser(ReservationCreateViaGuestUser):
         for room_reservation in room_reservation:
             output_string += room_reservation.room.room_unique_number + ' ' + room_reservation.room.room_type.type_name + '<br/>'
         return output_string
+
+
+class ReservationDateUpdateAPIVIew(serializers.ModelSerializer):
+    class Meta:
+        model = Reservation
+        fields = ('start_date', 'end_date')
+
+    def validate(self, attrs):
+        return validate_start_and_end_date(attrs)
+
+    def update(self, instance: Reservation, validated_data):
+        instance.start_date = validated_data.get('start_date', instance.start_date)
+        instance.end_date = validated_data.get('end_date', instance.end_date)
+        instance.save()
+        return instance
+
+def validate_start_and_end_date(attrs):
+    if attrs.get('start_date') >= attrs.get('end_date'):
+        raise ValidationError("Start date must be smaller than end date")
+    if attrs.get('start_date') < datetime.now().date():
+        raise ValidationError("Start date must be in the future")
+    if attrs.get('end_date') < datetime.now().date():
+        raise ValidationError("End date must be in the future")
+    return attrs

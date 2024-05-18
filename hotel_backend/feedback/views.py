@@ -99,11 +99,11 @@ class FeedbackViewedChangeAPIView(UpdateAPIView):
     serializer_class = FeedBackListSerializer
 
     def update(self, request, *args, **kwargs):
-        feedback_id = self.kwargs.get('feedback_id')
+        feedback_id = self.request.query_params.get('feedback_id')
         if not Feedback.objects.filter(id=feedback_id).exists():
             return Response({'message': 'Feedback not found'}, status=status.HTTP_404_NOT_FOUND)
         feedback_obj = Feedback.objects.get(id=feedback_id)
-        feedback_obj.viewed = False
+        feedback_obj.viewed = True
         feedback_obj.save()
         serializer = self.get_serializer(feedback_obj)
         return Response(serializer.data, status=status.HTTP_202_ACCEPTED)

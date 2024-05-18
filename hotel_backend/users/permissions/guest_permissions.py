@@ -1,5 +1,7 @@
 from rest_framework.permissions import BasePermission
 
+from feedback.models import Feedback
+from hotel_reservation.models import Reservation
 from users.models import Guest, Admin, HotelManager
 
 
@@ -9,6 +11,12 @@ class GuestPermission(BasePermission):
         return Guest.objects.filter(user=request.user).exists() or Admin.objects.filter(
             user=request.user).exists() or HotelManager.objects.filter(user=request.user).exists()
 
+    def has_object_permission(self, request, view, obj):
+        if isinstance(obj, Reservation):
+            return obj.guest_user.id == request.user.guest.id
+        if isinstance(obj, Feedback):
+            return obj.guest.id == request.user.guest.id
+        return False
 
 class GuestOnlyPermission(BasePermission):
     def has_permission(self, request, view):

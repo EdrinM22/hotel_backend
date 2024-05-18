@@ -1,7 +1,8 @@
 from datetime import datetime
+from functools import reduce
 
 from django.http import HttpResponse
-from rest_framework.generics import CreateAPIView, ListAPIView
+from rest_framework.generics import CreateAPIView, ListAPIView, UpdateAPIView, DestroyAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
@@ -10,20 +11,21 @@ from django.db import transaction
 from django.db.models import Q
 from rest_framework.exceptions import NotAcceptable, ValidationError
 
+from users.permissions.guest_permissions import GuestPermission
 from users.permissions.hotel_manager_permissions import HotelManagerPermissions
 from users.permissions.receptionist_permissions import ReceptionistPermission
 from .paginators import CustomPagination
 
-from hotel_reservation.models import Reservation, Room
+from hotel_reservation.models import Reservation, Room, RoomReservation
 from hotel_reservation.serializers.ReservationSerializers import ReservationCreateViaGuestUser, \
     ReservationCreateViaGuestInfo, ReservationListSerializer, ReservationPDFCreateAPIView, \
-    ReservationReceiptViaGuestUser, ReservationReceiptViaGuestInfo
+    ReservationReceiptViaGuestUser, ReservationReceiptViaGuestInfo, ReservationDateUpdateAPIVIew
 
 from users.models import Guest, Receptionist
 
 from hotel_reservation.views import calculate_the_total_cost_of_reservation, create_name_for_reservation
 
-from .shared import check_if_room_is_free
+from .shared import check_if_room_is_free, check_if_specific_room_is_reserved
 from ..pdfs.ReservationReceiptPDF import ReservationReceiptPDF
 
 
@@ -41,8 +43,9 @@ class ReservationCreateAPIView(CreateAPIView):
 
     @transaction.atomic
     def post(self, request, *args, **kwargs):
-        if not self.request.data.get('success') or not self.request.data.get('payment_intent_id'):
-            return Response({'message': 'What'}, status=status.HTTP_400_BAD_REQUEST)
+        paid = True
+        if not self.request.data.get('payment_intent_id'):
+            paid = False
         total_cost_of_reservation, payment_type = calculate_the_total_cost_of_reservation(request.data, request)
 
         # name_of_reservation = create_name_for_reservation(request.data) if request.user.is_authenticated and Guest.objects.filter(user=self.request.user).exists() else create_name_for_reservation(self.request.data, guest_account=False)
@@ -59,6 +62,7 @@ class ReservationCreateAPIView(CreateAPIView):
         # the_data = map(lambda k, v: {k: v[0]}, the_data)
         the_data['total_payment'] = total_cost_of_reservation
         the_data['payment_type'] = payment_type
+        the_data['paid'] = paid
         serializer_obj = self.get_serializer(data=the_data)
         serializer_obj.is_valid(raise_exception=True)
         obj = serializer_obj.save()
@@ -96,7 +100,7 @@ class ReservationListAPIVIew(ListAPIView):
 
     def get_queryset(self):
         query_params = self.request.query_params
-        reservation_queryset = Reservation.objects.exclude(end_date__lte=datetime.now().date())
+        reservation_queryset = Reservation.objects.exclude(end_date__lte=datetime.now().date(), cancelled=True)
         filter_diction = {
             # 'name__icontains': query_params.get('name', ''),
             'paid': query_params.get('paid'),
@@ -105,3 +109,78 @@ class ReservationListAPIVIew(ListAPIView):
         }
         filter_diction = {k: v for k, v in filter_diction.items() if v is not None}
         return reservation_queryset.filter(**filter_diction).order_by('-start_date')
+
+
+class ReservationChangeDateAPIView(UpdateAPIView):
+    queryset = Reservation.objects.all()
+    serializer_class = ReservationDateUpdateAPIVIew
+    permission_classes = [IsAuthenticated, GuestPermission, ReceptionistPermission]
+
+    @transaction.atomic
+    def update(self, request, *args, **kwargs):
+        if not request.data.get('start_date') and not request.data.get('end_date'):
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        reservation_obj: Reservation = self.get_object()
+        start_date = datetime.strptime(request.data.get('start_date'), '%d/%m/%Y').date()
+        end_date = datetime.strptime(request.data.get('end_date'), '%d/%m/%Y').date()
+        rooms = reservation_obj.room_reservations.all().values_list('room', flat=True)
+        n1 = reduce(lambda acc, y: acc or check_if_specific_room_is_reserved(y, start_date, end_date, reservation_obj.id) if
+        isinstance(acc, bool) else check_if_specific_room_is_reserved(acc, start_date, end_date, reservation_obj.id) or
+                                   check_if_specific_room_is_reserved(y, start_date, end_date, reservation_obj.id), rooms)
+        if n1:
+            return Response('Not all rooms are free in these days, please give us some other dates',
+                            status=status.HTTP_400_BAD_REQUEST)
+        data = {'start_date': start_date, 'end_date': end_date}
+        serializer_obj = self.get_serializer(reservation_obj, data=data)
+        serializer_obj.is_valid(raise_exception=True)
+        serializer_obj.save()
+        return Response(serializer_obj.data, status=status.HTTP_200_OK)
+
+
+class ReservationChangePaidAPIView(UpdateAPIView):
+    permission_classes = [IsAuthenticated, ReceptionistPermission]
+
+    def update(self, request, *args, **kwargs):
+        reservation_obj: Reservation = self.get_object()
+        reservation_obj.paid = True
+        reservation_obj.save()
+        return Response(status=status.HTTP_200_OK)
+
+
+class ReservationCancelAPIView(UpdateAPIView):
+    permission_classes = [IsAuthenticated, ReceptionistPermission, GuestPermission]
+
+    def update(self, request, *args, **kwargs):
+        reservation_obj: Reservation = self.get_object()
+        reservation_obj.cancelled = True
+        reservation_obj.save()
+        return Response(status=status.HTTP_200_OK)
+
+
+class ReservationDeleteRoomAPIView(UpdateAPIView):
+    permission_classes = [IsAuthenticated, ReceptionistPermission, GuestPermission]
+    serializer_class = ReservationListSerializer
+
+    @transaction.atomic
+    def update(self, request, *args, **kwargs):
+        if not Room.objects.filter(id=kwargs['room_id']).exists() and not Reservation.objects.filter(
+                room_id=kwargs['reservation_id']).exists():
+            return Response({'message': "Please provide id of room and reservation"},
+                            status=status.HTTP_404_NOT_FOUND)
+        reservation_obj = Reservation.objects.get(id=kwargs['reservation_id'])
+        room_obj = Room.objects.get(id=kwargs['room_id'])
+        room_reservation: RoomReservation = room_obj.room_reservations.filter(room_id=room_obj.id,
+                                                                              reservation_id=reservation_obj.id).first()
+        room_reservation.delete()
+        rooms_left = RoomReservation.objects.filter(reservation_id=reservation_obj.id)
+        number_of_days = (reservation_obj.end_date - reservation_obj.start_date).days
+        the_new_total_cost = sum(rooms_left.values_list('room__online_price',
+                                                        flat=True)) * int(number_of_days) if reservation_obj.payment_type == 'online' else sum(
+            rooms_left.values_list('room__real_price', flat=True)) * int(number_of_days)
+        reservation_obj.total_payment = the_new_total_cost
+        try:
+            reservation_obj.save()
+        except Exception as e:
+            print(e)
+        serializer_obj = self.get_serializer(reservation_obj)
+        return Response(serializer_obj.data, status=status.HTTP_200_OK)
