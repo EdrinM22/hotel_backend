@@ -127,13 +127,22 @@ class ReservationCreateViaGuestInfo(ReservationAbstractSerializer):
         return Reservation
 
 
+class RoomReservationListSerializer(serializers.ModelSerializer):
+    room = RoomListSerializer(read_only=True)
+
+    class Meta:
+        model = RoomReservation
+        fields = ('room', )
+
+
 class ReservationListSerializer(ReservationAbstractSerializer):
-    rooms = RoomListSerializer(many=True, read_only=True)
     reservation_cost = serializers.SerializerMethodField()
     person_info = serializers.SerializerMethodField()
+    room_reservations = RoomReservationListSerializer(many=True, read_only=True)
 
     class Meta(ReservationAbstractSerializer.Meta):
-        fields = ReservationAbstractSerializer.Meta.fields + ('applying_date', 'rooms', 'reservation_cost', 'person_info')
+        fields = ReservationAbstractSerializer.Meta.fields + ('applying_date', 'room_reservations',
+                                                              'reservation_cost', 'person_info', 'id')
 
     def get_person_info(self, obj: Reservation):
         if obj.guest_information:
@@ -152,6 +161,7 @@ class ReservationListSerializer(ReservationAbstractSerializer):
 
 class ReservationReceiptViaGuestInfo(ReservationCreateViaGuestInfo):
     real_total_payment = serializers.SerializerMethodField()
+
     class Meta(ReservationCreateViaGuestInfo.Meta):
         fields = ('id', 'real_total_payment') + ReservationCreateViaGuestInfo.Meta.fields
 
@@ -162,6 +172,7 @@ class ReservationReceiptViaGuestInfo(ReservationCreateViaGuestInfo):
             room = room_reservation.room
             total_payment += room.online_price if obj.payment_type == 'online' else room.real_price
         return total_payment
+
 
 class ReservationReceiptViaGuestUser(ReservationCreateViaGuestUser):
     room_numbers = serializers.SerializerMethodField()
