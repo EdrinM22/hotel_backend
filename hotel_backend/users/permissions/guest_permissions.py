@@ -13,9 +13,9 @@ class GuestPermission(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         if isinstance(obj, Reservation):
-            return obj.guest_user.id == request.user.guest.id
+            return obj.guest_user == request.user.guest
         if isinstance(obj, Feedback):
-            return obj.guest.id == request.user.guest.id
+            return obj.guest == request.user.guest
         return False
 
 class GuestOnlyPermission(BasePermission):

@@ -9,7 +9,7 @@ from rest_framework import status
 
 from django.db import transaction
 from django.db.models import Q
-from rest_framework.exceptions import NotAcceptable, ValidationError
+from rest_framework.exceptions import NotAcceptable, ValidationError, PermissionDenied
 
 from users.permissions.guest_permissions import GuestPermission
 from users.permissions.hotel_manager_permissions import HotelManagerPermissions
@@ -114,7 +114,16 @@ class ReservationListAPIVIew(ListAPIView):
 class ReservationChangeDateAPIView(UpdateAPIView):
     queryset = Reservation.objects.all()
     serializer_class = ReservationDateUpdateAPIVIew
-    permission_classes = [IsAuthenticated, GuestPermission, ReceptionistPermission]
+    # permission_classes = [IsAuthenticated, GuestPermission, ReceptionistPermission]
+
+    def get_permissions(self):
+        if self.request.user.is_anonymous:
+            raise PermissionDenied("Access Denied")
+        elif Guest.objects.filter(user=self.request.user).exists():
+            return [IsAuthenticated(), GuestPermission()]
+        elif Receptionist.objects.filter(user=self.request.user).exists():
+            return [IsAuthenticated(), ReceptionistPermission()]
+        return super(ReservationChangeDateAPIView, self).get_permissions()
 
     @transaction.atomic
     def update(self, request, *args, **kwargs):
@@ -148,7 +157,17 @@ class ReservationChangePaidAPIView(UpdateAPIView):
 
 
 class ReservationCancelAPIView(UpdateAPIView):
-    permission_classes = [IsAuthenticated, ReceptionistPermission, GuestPermission]
+    # permission_classes = [IsAuthenticated, ReceptionistPermission, GuestPermission]
+
+    def get_permissions(self):
+        if self.request.user.is_anonymous:
+            raise PermissionDenied("Access Denied")
+        elif Guest.objects.filter(user=self.request.user).exists():
+            return [IsAuthenticated(), GuestPermission()]
+        elif Receptionist.objects.filter(user=self.request.user).exists():
+            return [IsAuthenticated(), ReceptionistPermission()]
+        return super(ReservationCancelAPIView, self).get_permissions()
+
 
     def update(self, request, *args, **kwargs):
         reservation_obj: Reservation = self.get_object()
@@ -158,29 +177,42 @@ class ReservationCancelAPIView(UpdateAPIView):
 
 
 class ReservationDeleteRoomAPIView(UpdateAPIView):
-    permission_classes = [IsAuthenticated, ReceptionistPermission, GuestPermission]
+    # permission_classes = [IsAuthenticated, ReceptionistPermission, GuestPermission]
     serializer_class = ReservationListSerializer
 
+    def get_permissions(self):
+        if self.request.user.is_anonymous:
+            raise PermissionDenied("Access Denied")
+        elif Guest.objects.filter(user=self.request.user).exists():
+            return [IsAuthenticated(), GuestPermission()]
+        elif Receptionist.objects.filter(user=self.request.user).exists():
+            return [IsAuthenticated(), ReceptionistPermission()]
+        return super(ReservationDeleteRoomAPIView, self).get_permissions()
+
+    def get_object(self):
+        if Reservation.objects.filter(id=self.kwargs.get('reservation_id')).exists():
+            return Reservation.objects.get(id=self.kwargs.get('reservation_id'))
+        raise ValidationError("Not Found")
     @transaction.atomic
     def update(self, request, *args, **kwargs):
-        if not Room.objects.filter(id=kwargs['room_id']).exists() and not Reservation.objects.filter(
-                room_id=kwargs['reservation_id']).exists():
-            return Response({'message': "Please provide id of room and reservation"},
-                            status=status.HTTP_404_NOT_FOUND)
-        reservation_obj = Reservation.objects.get(id=kwargs['reservation_id'])
-        room_obj = Room.objects.get(id=kwargs['room_id'])
-        room_reservation: RoomReservation = room_obj.room_reservations.filter(room_id=room_obj.id,
-                                                                              reservation_id=reservation_obj.id).first()
-        room_reservation.delete()
-        rooms_left = RoomReservation.objects.filter(reservation_id=reservation_obj.id)
-        number_of_days = (reservation_obj.end_date - reservation_obj.start_date).days
-        the_new_total_cost = sum(rooms_left.values_list('room__online_price',
-                                                        flat=True)) * int(number_of_days) if reservation_obj.payment_type == 'online' else sum(
-            rooms_left.values_list('room__real_price', flat=True)) * int(number_of_days)
-        reservation_obj.total_payment = the_new_total_cost
         try:
+            if not Room.objects.filter(id=kwargs['room_id']).exists() and not Reservation.objects.filter(
+                    room_id=kwargs['reservation_id']).exists():
+                return Response({'message': "Please provide id of room and reservation"},
+                                status=status.HTTP_404_NOT_FOUND)
+            reservation_obj = Reservation.objects.get(id=kwargs['reservation_id'])
+            room_obj = Room.objects.get(id=kwargs['room_id'])
+            room_reservation: RoomReservation = room_obj.room_reservations.filter(room_id=room_obj.id,
+                                                                                  reservation_id=reservation_obj.id).first()
+            room_reservation.delete()
+            rooms_left = RoomReservation.objects.filter(reservation_id=reservation_obj.id)
+            number_of_days = (reservation_obj.end_date - reservation_obj.start_date).days
+            the_new_total_cost = sum(rooms_left.values_list('room__online_price',
+                                                            flat=True)) * int(number_of_days) if reservation_obj.payment_type == 'online' else sum(
+                rooms_left.values_list('room__real_price', flat=True)) * int(number_of_days)
+            reservation_obj.total_payment = the_new_total_cost
             reservation_obj.save()
+            serializer_obj = self.get_serializer(reservation_obj)
+            return Response(serializer_obj.data, status=status.HTTP_200_OK)
         except Exception as e:
-            print(e)
-        serializer_obj = self.get_serializer(reservation_obj)
-        return Response(serializer_obj.data, status=status.HTTP_200_OK)
+            print(e);

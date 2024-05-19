@@ -11,4 +11,5 @@ class ReceptionistPermission(BasePermission):
             user=request.user).exists() or HotelManager.objects.filter(user=request.user).exists()
 
     def has_object_permission(self, request, view, obj):
-        return True
+        if isinstance(obj, Reservation):
+            return True
