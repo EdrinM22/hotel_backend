@@ -122,6 +122,9 @@ class RoomCreateAPIView(CreateAPIView):
         serializer: RoomCreateSerializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        room_type.total_count += 1
+        room_type.save()
+        serializer.data['id'] = room_type.id
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -142,9 +145,11 @@ class RoomTypeCreateAPIView(CreateAPIView):
             return Response({'message': "Please provide the price of room type"}, status=status.HTTP_400_BAD_REQUEST)
         online_price = self.find_online_price(request.data)
         real_price = int(request.data.get('price'))
+        total_count = 0
         data = {
             'online_price': online_price,
             'real_price': real_price,
+            'total_count': total_count,
             **request.data
         }
         data.pop('price')
