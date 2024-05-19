@@ -29,6 +29,7 @@ class RoomListAPIView(ListAPIView):
     '''
     queryset = Room.objects.all()
     serializer_class = RoomTypeCustomSerializer
+    pagination_class = CustomPagination
 
     def get(self, request, *args, **kwargs):
         if self.request.query_params.get('start_date') and self.request.query_params.get('end_date'):
@@ -67,28 +68,13 @@ class RoomAdminListAPIView(ListAPIView):
     queryset = Room.objects.all()
     serializer_class = RoomListSerializer
     permission_classes = [IsAuthenticated, HotelManagerPermissions]
-    pagination_class = CustomPagination
+    # pagination_class = CustomPagination
     '''
     Rooms for the admins or managers
     '''
 
     def get_queryset(self):
-        start_date = self.request.query_params.get('start_date')
-        end_date = self.request.query_params.get('end_date')
-        in_these_dates_include = self.request.query_params.get('include')
-
-        if start_date and end_date:
-            start_date = parse_to_date_time_dd_mm_yy_version(start_date)
-            end_date = parse_to_date_time_dd_mm_yy_version(end_date)
-            if in_these_dates_include == True:
-                the_wanted_queryset = self.get_queryset_for_given_reservation_dates(start_date, end_date)
-                self.filter_the_queryset(the_wanted_queryset)
-                return the_wanted_queryset
-            elif in_these_dates_include == False:
-                the_wanted_queryset = self.get_queryset_for_given_reservation_dates(start_date, end_date)
-                self.filter_the_queryset(the_wanted_queryset)
-                return the_wanted_queryset
-        return self.filter_the_queryset(Room.objects.all())
+        return Room.objects.all()
 
     def get_queryset_for_given_reservation_dates(self, start_date, end_date):
         return get_the_room_for_diferent_days(start_date, end_date, self.request.query_params.get('room_type'))

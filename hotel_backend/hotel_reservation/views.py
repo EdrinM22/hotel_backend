@@ -32,7 +32,7 @@ def calculate_the_total_cost_of_reservation(data, request: Request):
     end_date = datetime.strptime(data.get('end_date'), '%d/%m/%Y')
     difference_days = end_date - start_date
     room_ids: [] = find_room_ids_from_room_types(room_types=request.data.get('room_types'), start_date=start_date, end_date=end_date)
-    room_queryset = Room.objects.filter(pk__in=room_ids)
+    room_queryset = Room.objects.filter(pk__in=room_ids).order_by('id')
     if not request.user.is_authenticated or Guest.objects.filter(user=request.user).exists():
         total_price, payment_type = sum(room_queryset.values_list('online_price', flat=True)) * difference_days.days, 'online'
     elif Receptionist.objects.filter(user=request.user).exists():

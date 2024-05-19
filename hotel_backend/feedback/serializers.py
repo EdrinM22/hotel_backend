@@ -1,4 +1,6 @@
 from rest_framework import serializers
+
+from users.serializers.guest_serializer import GuestListSerializer
 from .models import Feedback
 
 
@@ -9,7 +11,7 @@ class FeedBackCreateSerializer(serializers.ModelSerializer):
 
 
 class FeedBackListSerializer(serializers.ModelSerializer):
-    guest = serializers.SerializerMethodField()
+    guest = GuestListSerializer(read_only=True)
 
     class Meta:
         model = Feedback

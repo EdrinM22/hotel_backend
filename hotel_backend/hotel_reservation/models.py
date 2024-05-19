@@ -53,6 +53,9 @@ class Reservation(models.Model):
 
 
 class RoomReservation(models.Model):
+    class Meta:
+        unique_together = ('reservation', 'room')
+
     reservation = models.ForeignKey(Reservation, related_name='room_reservations', on_delete=models.CASCADE)
     room = models.ForeignKey('Room', related_name='room_reservations', on_delete=models.CASCADE)
 
