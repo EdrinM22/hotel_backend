@@ -54,15 +54,19 @@ class RoomCreateSerializer(RoomAbstractSerializer):
 class RoomListSerializer(RoomAbstractSerializer):
     # room_reservations = RoomReservationListSerializer(many=True, read_only=True)
     is_reserved = serializers.SerializerMethodField()
+    room_type_name = serializers.SerializerMethodField()
     class Meta(RoomAbstractSerializer.Meta):
         fields = ('id', 'real_price', 'online_price', 'room_name', 'room_type', 'currency',
-                  'description', 'is_reserved') + RoomAbstractSerializer.Meta.fields
+                  'description', 'is_reserved', 'room_type_name') + RoomAbstractSerializer.Meta.fields
 
     def get_is_reserved(self, obj: Room):
         date_today = datetime.datetime.now().date()
         return Room.objects.filter(room_reservations__reservation__start_date__lte=date_today,
                                    room_reservations__reservation__end_date__gte=date_today,
                                    pk=obj.pk).exists()
+
+    def get_room_type_name(self, obj: Room):
+        return obj.room_type.type_name
 
 
 
