@@ -3,7 +3,7 @@ from hotel_reservation.the_api_views.ReservationViews import ReservationCreateAP
     ReservationReceiptCreateAPIView, ReservationChangeDateAPIView, ReservationChangePaidAPIView, \
     ReservationCancelAPIView, ReservationDeleteRoomAPIView
 from hotel_reservation.the_api_views.RoomViews import RoomListAPIView, RoomCreateAPIView, \
-    RoomTypeListForScrollerAPIView, RoomTypeCreateAPIView, RoomAdminListAPIView
+    RoomTypeListForScrollerAPIView, RoomTypeCreateAPIView, RoomAdminListAPIView, RoomTypeChangePriceAPIView
 from hotel_reservation.the_api_views.finance_views import RoomTypeFinanceListAPIView
 
 urlpatterns = [
@@ -20,4 +20,5 @@ urlpatterns = [
     path('reservation/pay/<int:pk>/', ReservationChangePaidAPIView.as_view(), name="ReservationChange_Paid"),
     path('reservation/cancel/<int:pk>/', ReservationCancelAPIView.as_view(), name="ReservationCancel_API"),
     path('reservation/<int:reservation_id>/delete/room/<int:room_id>/', ReservationDeleteRoomAPIView.as_view(), name="ReservationDelete_Room"),
+    path('room_type/changeprice/<int:reservation_id>/', RoomTypeChangePriceAPIView.as_view(), name="Room Type change price")
 ]
