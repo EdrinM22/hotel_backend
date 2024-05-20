@@ -146,8 +146,9 @@ class ReservationListSerializer(ReservationAbstractSerializer):
     def get_person_info(self, obj: Reservation):
         if obj.guest_information:
             return obj.guest_information.email
-        return obj.guest_user.user.email
-
+        elif obj.guest_user:
+            return obj.guest_user.user.email
+        return {}
     def get_reservation_cost(self, obj: Reservation):
         start_date = obj.start_date
         end_date = obj.end_date
