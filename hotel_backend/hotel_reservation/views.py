@@ -61,11 +61,13 @@ class PaymentIntentAPIView(APIView):
 
     def post(self, request):
         try:
-            total_amount = calculate_the_total_cost_of_reservation(self.request.data, self.request)
-            check_if_room_is_free(room_types=self.request.get('room_types'), start_date=self.request.get('start_date'),
-                                  end_date=self.request.get('end_date'))
+            start_date = datetime.strptime(request.data.get('start_date'), '%d/%m/%Y')
+            end_date = datetime.strptime(request.data.get('end_date'), '%d/%m/%Y')
+            total_amount, the_type = calculate_the_total_cost_of_reservation(self.request.data, self.request)
+            check_if_room_is_free(room_types=self.request.data.get('room_types'), start_date=start_date,
+                                  end_date=end_date)
             payment_intent = stripe.PaymentIntent.create(
-                amount=total_amount,
+                amount=str(int(total_amount)),
                 currency='eur',
                 payment_method_types=['card']
             )

@@ -39,7 +39,7 @@ def check_if_specific_room_is_reserved(room_id, start_date, end_date, reservatio
         ~Q(room_reservations__reservation_id=reservation_id), id=room_id).exists()
 
 
-def check_if_room_is_free(room_types: [], start_date: str, end_date: str):
+def check_if_room_is_free(room_types: [], start_date, end_date):
     for element in room_types:
         query_set_size = len(Room.objects.filter(room_type_id=element['id']))
 

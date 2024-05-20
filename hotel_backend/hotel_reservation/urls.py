@@ -5,8 +5,10 @@ from hotel_reservation.the_api_views.ReservationViews import ReservationCreateAP
 from hotel_reservation.the_api_views.RoomViews import RoomListAPIView, RoomCreateAPIView, \
     RoomTypeListForScrollerAPIView, RoomTypeCreateAPIView, RoomAdminListAPIView, RoomTypeChangePriceAPIView
 from hotel_reservation.the_api_views.finance_views import RoomTypeFinanceListAPIView
+from hotel_reservation.views import PaymentIntentAPIView
 
 urlpatterns = [
+    path('payment/intent/', PaymentIntentAPIView.as_view(), name='payment-intent'),
     path('reservation/create/', ReservationCreateAPIView.as_view(), name='Reservation_Create'),
     path('reservation/list/', ReservationListAPIVIew.as_view(), name='Reservation_List'),
     path('rooms/list/', RoomListAPIView.as_view(), name='room_list'),
