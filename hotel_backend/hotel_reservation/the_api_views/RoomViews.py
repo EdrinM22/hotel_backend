@@ -122,7 +122,7 @@ class RoomCreateAPIView(CreateAPIView):
         serializer: RoomCreateSerializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        room_type.total_count += 1
+        room_type.total_count = room_type.total_count + 1
         room_type.save()
         serializer.data['id'] = room_type.id
         return Response(serializer.data, status=status.HTTP_201_CREATED)
