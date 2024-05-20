@@ -6,6 +6,7 @@ from rest_framework.exceptions import ValidationError
 from hotel_reservation.models import Reservation, GuestInformation, Room, RoomReservation, RoomType
 
 from hotel_reservation.serializers.GuestInformationSerializer import GuestInformationCreateSerializer
+from users.models import Guest
 from users.serializers.guest_serializer import GuestListSerializer
 from .RoomSerializer import RoomListSerializer
 
@@ -82,8 +83,12 @@ class ReservationCreateViaGuestUser(ReservationAbstractSerializer):
         return validate_start_and_end_date(attrs)
 
     def create(self, validated_data):
+        query_set = Guest.objects.filter(user=self.context.get('request').user)
+        if not query_set.exists():
+            raise ValidationError("User not found for this guest")
+        guest_obj = query_set.first()
         room_types = validated_data.pop('room_types')
-        reservation_obj = Reservation.objects.create(**validated_data)
+        reservation_obj = Reservation.objects.create(guest_user=guest_obj, **validated_data)
         room_ids = find_room_ids_from_room_types(room_types, reservation_obj.start_date, reservation_obj.end_date)
         # RoomReservation.objects.create(room_id=int(room_id), reservation=reservation_obj)
         for room_id in room_ids:

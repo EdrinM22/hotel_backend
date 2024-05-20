@@ -65,7 +65,7 @@ class ReservationCreateAPIView(CreateAPIView):
         the_data['total_payment'] = total_cost_of_reservation
         the_data['payment_type'] = payment_type
         the_data['paid'] = paid
-        serializer_obj = self.get_serializer(data=the_data)
+        serializer_obj = self.get_serializer(data=the_data, context={'request': request})
         serializer_obj.is_valid(raise_exception=True)
         obj = serializer_obj.save()
         serializer_obj.validated_data['id'] = obj.id
