@@ -6,7 +6,8 @@ from rest_framework.exceptions import ValidationError
 from hotel_reservation.models import Reservation, GuestInformation, Room, RoomReservation, RoomType
 
 from hotel_reservation.serializers.GuestInformationSerializer import GuestInformationCreateSerializer
-from users.serializers.guest_serializer import GuestListSerializer
+from users.models import Guest
+from users.serializers.guest_serializer import GuestListSerializer, GuestCreateSerializer
 from .RoomSerializer import RoomListSerializer
 
 from .validators import date_today_serializer
@@ -23,10 +24,12 @@ def find_room_ids_from_room_types(room_types: [], start_date, end_date):
                                                                                                        flat=True).order_by(
             'id')
         room_for_given_dates = get_the_room_for_diferent_days(start_date=start_date, end_date=end_date,
-                                                              key=element.get('name')).values_list('id',
+                                                              key=element.get('id')).values_list('id',
                                                                                                    flat=True).order_by(
             'id')
         rooms_available_for_given_date = sorted(list(filter(lambda x: x not in room_for_given_dates, room_all_query_set)))
+        if len(rooms_available_for_given_date) < element.get('count'):
+            raise ValidationError("Not enough Rooms")
         rooms_to_be_added = [rooms_available_for_given_date[i] for i in range(int(element.get('count')))]
         list_of_rooms_that_will_be_reserved.extend(rooms_to_be_added)
         # for i in room_all_query_set:
@@ -64,22 +67,28 @@ class ReservationFilterSerializer(serializers.ModelSerializer):
                 attrs.pop(key)
         return attrs
 
+class RoomTypeForReservationCreateSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    count = serializers.IntegerField()
+
 
 class ReservationCreateViaGuestUser(ReservationAbstractSerializer):
-    room_id = serializers.IntegerField()
-
+    room_types = RoomTypeForReservationCreateSerializer(many=True)
     class Meta(ReservationAbstractSerializer.Meta):
         model = Reservation
         fields = ('guest_user', 'payment_type', 'payment_intent_id',
-                  'total_payment', 'room_id', 'paid') + ReservationAbstractSerializer.Meta.fields
+                  'total_payment', 'paid', 'room_types') + ReservationAbstractSerializer.Meta.fields
 
     def validate(self, attrs):
         return validate_start_and_end_date(attrs)
 
     def create(self, validated_data):
-        room_id = validated_data.pop('room_id')
+        query_set = Guest.objects.filter(user=self.context.get('request').user)
+        if not query_set.exists():
+            raise ValidationError("User not found for this guest")
+        guest_obj = query_set.first()
         room_types = validated_data.pop('room_types')
-        reservation_obj = Reservation.objects.create(**validated_data)
+        reservation_obj = Reservation.objects.create(guest_user=guest_obj, **validated_data)
         room_ids = find_room_ids_from_room_types(room_types, reservation_obj.start_date, reservation_obj.end_date)
         # RoomReservation.objects.create(room_id=int(room_id), reservation=reservation_obj)
         for room_id in room_ids:
@@ -96,19 +105,15 @@ class ReservationPDFCreateAPIView(ReservationAbstractSerializer):
                   'total_payment') + ReservationAbstractSerializer.Meta.fields
 
 
-class RoomTypeForReservationCreateSerializer(serializers.Serializer):
-    name = serializers.CharField()
-    count = serializers.IntegerField()
 
 
 class ReservationCreateViaGuestInfo(ReservationAbstractSerializer):
     guest_information = GuestInformationCreateSerializer()
-
-    # room_types = RoomTypeForReservationCreateSerializer(many=True)
+    room_types = RoomTypeForReservationCreateSerializer(many=True)
 
     class Meta(ReservationAbstractSerializer.Meta):
         model = Reservation
-        fields = ('guest_information', 'payment_type', 'payment_intent_id', 'total_payment', 'paid'
+        fields = ('guest_information', 'payment_type', 'payment_intent_id', 'total_payment', 'paid', 'room_types'
                   ) + ReservationAbstractSerializer.Meta.fields
 
     def validate(self, attrs):
@@ -123,7 +128,7 @@ class ReservationCreateViaGuestInfo(ReservationAbstractSerializer):
         # RoomReservation.objects.create(room_id=int(room_id), reservation=reservation_obj)
         for room_id in room_ids:
             RoomReservation.objects.create(room_id=room_id, reservation=reservation_obj)
-        return Reservation
+        return reservation_obj
 
 
 class RoomReservationListSerializer(serializers.ModelSerializer):
@@ -146,8 +151,9 @@ class ReservationListSerializer(ReservationAbstractSerializer):
     def get_person_info(self, obj: Reservation):
         if obj.guest_information:
             return obj.guest_information.email
-        return obj.guest_user.user.email
-
+        elif obj.guest_user:
+            return obj.guest_user.user.email
+        return {}
     def get_reservation_cost(self, obj: Reservation):
         start_date = obj.start_date
         end_date = obj.end_date
@@ -158,11 +164,14 @@ class ReservationListSerializer(ReservationAbstractSerializer):
             return sum(obj.room_reservations.all().values_list('room__real_price', flat=True)) * days
 
 
-class ReservationReceiptViaGuestInfo(ReservationCreateViaGuestInfo):
+class ReservationReceiptViaGuestInfo(serializers.ModelSerializer):
     real_total_payment = serializers.SerializerMethodField()
-
-    class Meta(ReservationCreateViaGuestInfo.Meta):
-        fields = ('id', 'real_total_payment') + ReservationCreateViaGuestInfo.Meta.fields
+    guest_information = GuestInformationCreateSerializer(read_only=True)
+    room_numbers = serializers.SerializerMethodField()
+    class Meta:
+        model = Reservation
+        fields = ('id', 'real_total_payment', 'guest_information', 'payment_type', 'payment_intent_id',
+                  'total_payment', 'paid', 'name', 'start_date', 'end_date', 'room_numbers')
 
     def get_real_total_payment(self, obj: Reservation):
         room_reservations = obj.room_reservations.all()
@@ -172,12 +181,23 @@ class ReservationReceiptViaGuestInfo(ReservationCreateViaGuestInfo):
             total_payment += room.online_price if obj.payment_type == 'online' else room.real_price
         return total_payment
 
+    def get_room_numbers(self, obj: Reservation):
+        room_reservation = obj.room_reservations.all()
+        output_string = ''
+        for room_reservation in room_reservation:
+            output_string += room_reservation.room.room_unique_number + ' ' + room_reservation.room.room_type.type_name + '<br/>'
+        return output_string
 
-class ReservationReceiptViaGuestUser(ReservationCreateViaGuestUser):
+
+class ReservationReceiptViaGuestUser(serializers.ModelSerializer):
     room_numbers = serializers.SerializerMethodField()
+    real_total_payment = serializers.SerializerMethodField()
+    guest_user = GuestCreateSerializer(read_only=True)
 
-    class Meta(ReservationCreateViaGuestUser.Meta):
-        fields = ('id', 'room_numbers') + ReservationCreateViaGuestUser.Meta.fields
+    class Meta:
+        model = Reservation
+        fields = ('id', 'real_total_payment', 'guest_user', 'payment_type', 'payment_intent_id',
+                  'total_payment', 'paid', 'name', 'start_date', 'end_date', 'room_numbers')
 
     def get_room_numbers(self, obj: Reservation):
         room_reservation = obj.room_reservations.all()
@@ -185,6 +205,14 @@ class ReservationReceiptViaGuestUser(ReservationCreateViaGuestUser):
         for room_reservation in room_reservation:
             output_string += room_reservation.room.room_unique_number + ' ' + room_reservation.room.room_type.type_name + '<br/>'
         return output_string
+
+    def get_real_total_payment(self, obj: Reservation):
+        room_reservations = obj.room_reservations.all()
+        total_payment = 0
+        for room_reservation in room_reservations:
+            room = room_reservation.room
+            total_payment += room.online_price if obj.payment_type == 'online' else room.real_price
+        return total_payment
 
 
 class ReservationDateUpdateAPIVIew(serializers.ModelSerializer):

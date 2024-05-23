@@ -1,15 +1,15 @@
 from django.db import transaction
-from django.http import QueryDict
+from django.http import QueryDict, Http404
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import ListAPIView, CreateAPIView
-from rest_framework.parsers import JSONParser
+from rest_framework.generics import ListAPIView, CreateAPIView, UpdateAPIView
+from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from hotel_reservation.models import Reservation, RoomReservation, Room, RoomType
 from hotel_reservation.serializers.RoomSerializer import RoomListSerializer, RoomTypeCustomSerializer, \
-    RoomCreateSerializer, RoomtypeListForScrollSerializer, RoomTypeCreateSerializer
+    RoomCreateSerializer, RoomtypeListForScrollSerializer, RoomTypeCreateSerializer, RoomTypeChangePriceSerializer
 from users.permissions.hotel_manager_permissions import HotelManagerPermissions
 from .paginators import CustomPagination
 
@@ -122,6 +122,9 @@ class RoomCreateAPIView(CreateAPIView):
         serializer: RoomCreateSerializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        room_type.total_count = room_type.total_count + 1
+        room_type.save()
+        serializer.data['id'] = room_type.id
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -134,7 +137,8 @@ class RoomTypeListForScrollerAPIView(ListAPIView):
 class RoomTypeCreateAPIView(CreateAPIView):
     queryset = RoomType.objects.all()
     serializer_class = RoomTypeCreateSerializer
-    permission_classes = [IsAuthenticated, HotelManagerPermissions]
+    # permission_classes = [IsAuthenticated, HotelManagerPermissions]
+    # parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
@@ -142,9 +146,11 @@ class RoomTypeCreateAPIView(CreateAPIView):
             return Response({'message': "Please provide the price of room type"}, status=status.HTTP_400_BAD_REQUEST)
         online_price = self.find_online_price(request.data)
         real_price = int(request.data.get('price'))
+        total_count = 0
         data = {
             'online_price': online_price,
             'real_price': real_price,
+            'total_count': total_count,
             **request.data
         }
         data.pop('price')
@@ -162,3 +168,27 @@ class RoomTypeCreateAPIView(CreateAPIView):
         for k, v in d1.items():
             data[k] = v[0]
         return data
+
+class RoomTypeChangePriceAPIView(UpdateAPIView):
+    queryset = RoomType.objects.all()
+    serializer_class = RoomTypeChangePriceSerializer
+    def get_object(self):
+        query_set = RoomType.objects.filter(id=self.kwargs.get('reservation_id'))
+        if query_set.exists():
+            return query_set.first()
+        raise Http404("Room type not found")
+
+
+    def update(self, request, *args, **kwargs):
+        if not request.data.get('price'):
+            return Response({'detail': 'Please provide a price'}, status=status.HTTP_400_BAD_REQUEST)
+        real_price = float(request.data.get('price'))
+        online_price = real_price + 2
+        data = {
+            'online_price': online_price,
+            'real_price': real_price
+        }
+        serializer_obj = self.get_serializer(self.get_object(), data=data)
+        serializer_obj.is_valid(raise_exception=True)
+        serializer_obj.save()
+        return Response(serializer_obj.validated_data, status=status.HTTP_202_ACCEPTED)

@@ -46,6 +46,8 @@ class ReservationCreateAPIView(CreateAPIView):
         paid = True
         if not self.request.data.get('payment_intent_id'):
             paid = False
+        if request.user.is_authenticated and Receptionist.objects.filter(user=request.user).exists():
+            paid = request.data.get('paid')
         total_cost_of_reservation, payment_type = calculate_the_total_cost_of_reservation(request.data, request)
 
         # name_of_reservation = create_name_for_reservation(request.data) if request.user.is_authenticated and Guest.objects.filter(user=self.request.user).exists() else create_name_for_reservation(self.request.data, guest_account=False)
@@ -63,7 +65,7 @@ class ReservationCreateAPIView(CreateAPIView):
         the_data['total_payment'] = total_cost_of_reservation
         the_data['payment_type'] = payment_type
         the_data['paid'] = paid
-        serializer_obj = self.get_serializer(data=the_data)
+        serializer_obj = self.get_serializer(data=the_data, context={'request': request})
         serializer_obj.is_valid(raise_exception=True)
         obj = serializer_obj.save()
         serializer_obj.validated_data['id'] = obj.id
@@ -140,6 +142,12 @@ class ReservationChangeDateAPIView(UpdateAPIView):
             return Response('Not all rooms are free in these days, please give us some other dates',
                             status=status.HTTP_400_BAD_REQUEST)
         data = {'start_date': start_date, 'end_date': end_date}
+        days = (end_date - start_date).days
+        the_new_total_cost = sum(reservation_obj.room_reservations.values_list('room__online_price',
+                                                        flat=True)) * int(
+            days) if reservation_obj.payment_type == 'online' else sum(
+            reservation_obj.room_reservations.values_list('room__real_price', flat=True)) * int(days)
+        reservation_obj.total_payment = the_new_total_cost
         serializer_obj = self.get_serializer(reservation_obj, data=data)
         serializer_obj.is_valid(raise_exception=True)
         serializer_obj.save()
@@ -215,4 +223,4 @@ class ReservationDeleteRoomAPIView(UpdateAPIView):
             serializer_obj = self.get_serializer(reservation_obj)
             return Response(serializer_obj.data, status=status.HTTP_200_OK)
         except Exception as e:
-            print(e);
+            print(e)

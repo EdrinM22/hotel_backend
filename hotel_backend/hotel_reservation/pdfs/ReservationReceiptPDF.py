@@ -71,7 +71,7 @@ class ReservationReceiptPDF:
         )
 
     def table_page(self):
-        data = self.data.get('guest_information', self.data.get('guest_user'))
+        data = self.data.get('guest_information') if self.data.get('guest_information') else self.data.get('guest_user').get('user')
         data_of_table = [
             [
                 Paragraph("First Name", style=self.normal_paragraph_center),

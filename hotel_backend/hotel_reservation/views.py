@@ -33,8 +33,12 @@ def calculate_the_total_cost_of_reservation(data, request: Request):
     difference_days = end_date - start_date
     room_ids: [] = find_room_ids_from_room_types(room_types=request.data.get('room_types'), start_date=start_date, end_date=end_date)
     room_queryset = Room.objects.filter(pk__in=room_ids).order_by('id')
-    if not request.user.is_authenticated or Guest.objects.filter(user=request.user).exists():
+    if ((not request.user.is_authenticated or Guest.objects.filter(user=request.user).exists())
+            and data.get('payment_intent_id')):
         total_price, payment_type = sum(room_queryset.values_list('online_price', flat=True)) * difference_days.days, 'online'
+    elif (not request.user.is_authenticated or Guest.objects.filter(user=request.user) and not data.get('payment_intent_id')):
+        total_price, payment_type = sum(
+            room_queryset.values_list('real_price', flat=True)) * difference_days.days, 'reception'
     elif Receptionist.objects.filter(user=request.user).exists():
         total_price, payment_type = sum(room_queryset.values_list('real_price', flat=True)) * difference_days.days, 'reception'
     else:
@@ -57,11 +61,13 @@ class PaymentIntentAPIView(APIView):
 
     def post(self, request):
         try:
-            total_amount = calculate_the_total_cost_of_reservation(self.request.data, self.request)
-            check_if_room_is_free(room_types=self.request.get('room_types'), start_date=self.request.get('start_date'),
-                                  end_date=self.request.get('end_date'))
+            start_date = datetime.strptime(request.data.get('start_date'), '%d/%m/%Y')
+            end_date = datetime.strptime(request.data.get('end_date'), '%d/%m/%Y')
+            total_amount, the_type = calculate_the_total_cost_of_reservation(self.request.data, self.request)
+            check_if_room_is_free(room_types=self.request.data.get('room_types'), start_date=start_date,
+                                  end_date=end_date)
             payment_intent = stripe.PaymentIntent.create(
-                amount=total_amount,
+                amount=str(int(total_amount)),
                 currency='eur',
                 payment_method_types=['card']
             )
