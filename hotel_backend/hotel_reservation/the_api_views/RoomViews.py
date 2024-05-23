@@ -137,21 +137,22 @@ class RoomTypeListForScrollerAPIView(ListAPIView):
 class RoomTypeCreateAPIView(CreateAPIView):
     queryset = RoomType.objects.all()
     serializer_class = RoomTypeCreateSerializer
-    # permission_classes = [IsAuthenticated, HotelManagerPermissions]
+    permission_classes = [IsAuthenticated, HotelManagerPermissions]
     # parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
         if not request.data.get('price'):
             return Response({'message': "Please provide the price of room type"}, status=status.HTTP_400_BAD_REQUEST)
-        online_price = self.find_online_price(request.data)
-        real_price = int(request.data.get('price'))
+        data1 = self.parse_to_dictionary()
+        online_price = self.find_online_price(data1)
+        real_price = int(data1.get('price'))
         total_count = 0
         data = {
             'online_price': online_price,
             'real_price': real_price,
             'total_count': total_count,
-            **request.data
+            **data1
         }
         data.pop('price')
         serializer: RoomTypeCreateSerializer = self.get_serializer(data=data)
